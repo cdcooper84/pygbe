@@ -30,8 +30,454 @@ from scipy.misc import factorial
 from math import gamma
 from scipy.linalg import solve
 
-def an_spherical(q, xq, E_1, E_2, E_0, R, N):
+def transformation_matrix(theta,phi):
+    M = zeros((3,3))
+    M[0,0] = sin(theta)*cos(phi)
+    M[0,1] = cos(theta)*cos(phi)
+    M[0,2] = -sin(phi)
+    M[1,0] = sin(theta)*sin(phi)
+    M[1,1] = cos(theta)*sin(phi)
+    M[1,2] = cos(phi)
+    M[2,0] = cos(theta)
+    M[2,1] = -sin(theta)
+    M[2,2] = 0
+
+    return M
+
+
+def sph2cart(spherical_vector, position):
+
+    cartesian_vector = zeros((len(spherical_vector), 3), dtype=complex)
+    r_comp      = spherical_vector[:,0]
+    theta_comp  = spherical_vector[:,1]
+    phi_comp    = spherical_vector[:,2]
+
+    theta = arccos(position[:,2]/sqrt(sum(position**2, axis=1)))
+    phi =  arctan2(position[:,1],position[:,0])
+
+    x = r_comp*sin(theta)*cos(phi) + theta_comp*cos(theta)*cos(phi) - phi_comp*sin(phi)
+    y = r_comp*sin(theta)*sin(phi) + theta_comp*cos(theta)*sin(phi) + phi_comp*cos(phi)
+    z = r_comp*cos(theta) - theta_comp*sin(theta)
+
+    cartesian_vector[:,0] = x[:]
+    cartesian_vector[:,1] = y[:]
+    cartesian_vector[:,2] = z[:]
+
+    return cartesian_vector 
+
+def sph2cart_vector(spherical_vector, position):
+
+    theta = arccos(position[:,2]/sqrt(sum(position**2, axis=1)))
+    phi =  arctan2(position[:,1],position[:,0])
+
+    cartesian_vector = zeros((len(spherical_vector), 3), dtype=complex)
+
+    for i in range(len(spherical_vector)):
+        M = transformation_matrix(theta[i],phi[i])
+        cartesian_vector[i,:] = dot(M, spherical_vector[i,:])
+
+    return cartesian_vector
+
+def sph2cart_tensor(spherical_tensor, position):
+
+    theta = arccos(position[:,2]/sqrt(sum(position**2, axis=1)))
+    phi =  arctan2(position[:,1],position[:,0])
+
+    cartesian_tensor = zeros((len(spherical_tensor), 3, 3), dtype=complex)
+
+    for i in range(len(spherical_tensor)):
+        M = transformation_matrix(theta[i],phi[i])
+        M2 = dot(M,spherical_tensor[i,:,:])
+        cartesian_tensor[i,:,:] = dot(M2, transpose(M))
+
+    return cartesian_tensor
+
+def Ynm_theta_derivative(m, n, azim, zenit, Ynm):
+
+    Ynmp1 = special.sph_harm(m+1,n,azim,zenit)
+    Ynmm1 = special.sph_harm(m-1,n,azim,zenit)
+    if m==0 and n==0:
+        dYnm_dtheta = 0
+    elif zenit==0:
+        dYnm_dtheta = 0.
+    elif m+1<n:
+        dYnm_dtheta =  sqrt((n-m)*(n+m+1))*exp(-1j*azim)*Ynmp1 \
+                            + m/tan(zenit)*Ynm
+    else:
+        dYnm_dtheta =  -sqrt((n+m)*(n-m+1))*exp(1j*azim)*Ynmm1 \
+                            - m/tan(zenit)*Ynm
+    return dYnm_dtheta
+
+def Ynmst_theta_derivative(m, n, azim, zenit, Ynm_st):
+
+    Ynmp1_st = conj(special.sph_harm(m+1,n,azim,zenit))
+    Ynmm1_st = conj(special.sph_harm(m-1,n,azim,zenit))
+
+    index = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
+    dYnmst_dtheta = zeros(len(xq), dtype=complex)
+    if m==0 and n==0:
+        dYnmst_dtheta = zeros(len(xq), dtype=complex)
+    elif m+1<n:
+        dYnmst_dtheta[index] =  sqrt((n-m)*(n+m+1))*exp(1j*azim[index])*Ynmp1_st[index] \
+                            + m/tan(zenit[index])*Ynm_st[index]
+    else:
+        dYnmst_dtheta[index] =  -sqrt((n+m)*(n-m+1))*exp(-1j*azim[index])*Ynmm1_st[index] \
+                            - m/tan(zenit[index])*Ynm_st[index]
+    return dYnmst_dtheta
+
+def Ynmst_theta_2derivative(m, n, azim, zenit, Ynm_st, dYnmst_dtheta):
+
+    Ynmp1_st = conj(special.sph_harm(m+1,n,azim,zenit))
+    Ynmm1_st = conj(special.sph_harm(m-1,n,azim,zenit))
+
+    index = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
+    d2Ynmst_dtheta2 = zeros(len(zenit), dtype=complex)
+    if m==0 and n==0:
+        dYnmst_dtheta = 0
+    elif m+1<n:
+        dYnmp1st_dtheta = -sqrt((n+m+1)*(n-m))*exp(-1j*azim[index])*Ynm_st[index] \
+                            - (m+1)/tan(zenit[index])*Ynmp1_st[index]
+        d2Ynmst_dtheta2[index] =  sqrt((n-m)*(n+m+1))*exp(1j*azim[index])*dYnmp1st_dtheta \
+                                + m*(-1/sin(zenit[index])*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
+
+    else:
+        dYnmm1st_dtheta = sqrt((n-m+1)*(n+m))*exp(1j*azim[index])*Ynm_st[index] \
+                        + (m-1) * 1/tan(zenit[index])*Ynmm1_st[index]
+        d2Ynmst_dtheta2[index] =  -sqrt((n+m)*(n-m+1))*exp(-1j*azim[index])*dYnmm1st_dtheta \
+                                - m*(-1/sin(zenit[index])*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
+    return d2Ynmst_dtheta2
+
+def Ynm_theta_2derivative(m, n, azim, zenit, Ynm, dYnm_dtheta):
+
+    Ynmp1 = special.sph_harm(m+1,n,azim,zenit)
+    Ynmm1 = special.sph_harm(m-1,n,azim,zenit)
+
+    d2Ynm_dtheta2 = zeros(1, dtype=complex)
+    if m==0 and n==0:
+        dYnmst_dtheta = 0
+    elif abs(zenit)<1e-10:
+        dYnmst_dtheta = 0
+    elif m+1<n:
+        dYnmp1_dtheta = -sqrt((n+m+1)*(n-m))*exp(1j*azim)*Ynm \
+                            - (m+1)/tan(zenit)*Ynmp1
+        d2Ynm_dtheta2 =  sqrt((n-m)*(n+m+1))*exp(-1j*azim)*dYnmp1_dtheta \
+                                + m*(-1/sin(zenit)*Ynm + 1/tan(zenit)*dYnm_dtheta)
+
+    else:
+        dYnmm1_dtheta = sqrt((n-m+1)*(n+m))*exp(-1j*azim)*Ynm \
+                        + (m-1) * 1/tan(zenit)*Ynmm1
+        d2Ynm_dtheta2 =  -sqrt((n+m)*(n-m+1))*exp(1j*azim)*dYnmm1_dtheta \
+                                - m*(-1/sin(zenit)*Ynm + 1/tan(zenit)*dYnm_dtheta)
+
+    return d2Ynm_dtheta2
+
+def vector_grad_rYnmst(m, n, rho, azim, zenit, Ynm_st):
+
+    grad_gradSpherical = zeros((len(azim),3,3), dtype=complex)
+
+    dYnmst_dtheta   = Ynmst_theta_derivative(m, n, azim, zenit, Ynm_st)
+    dYnmst_dphi     = -1j*m*Ynm_st
+    d2Ynmst_dtheta2 = Ynmst_theta_2derivative(m, n, azim, zenit, Ynm_st, dYnmst_dtheta) 
+    d2Ynmst_dphi2   = -m**2*Ynm_st
+    d2Ynmst_dthdphi = -1j*m*dYnmst_dtheta
+
+    index = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
+
+    Ar = n*rho**(n-1)*Ynm_st
+    dAr_dr  = n*(n-1)*rho**(n-2)*Ynm_st
+    dAr_dth = n*rho**(n-1)*dYnmst_dtheta
+    dAr_dph = n*rho**(n-1)*dYnmst_dphi
+
+    Ath = rho**(n-1)*dYnmst_dtheta
+    dAth_dr  = (n-1)*rho**(n-2) * dYnmst_dtheta
+    dAth_dth = rho**(n-1) * d2Ynmst_dtheta2 
+    dAth_dph = rho**(n-1) * d2Ynmst_dthdphi
+
+    Aph = rho**(n-1)/sin(zenit) * dYnmst_dphi
+    dAph_dr = (n-1)*rho[index]**(n-2)/sin(zenit[index]) * dYnmst_dphi[index]
+    dAph_dth = rho[index]**(n-1)* \
+        (-cos(zenit[index])/sin(zenit[index])**2 * dYnmst_dphi[index] + 1/sin(zenit[index])*d2Ynmst_dthdphi[index])
+    dAph_dph = rho[index]**(n-1)/sin(zenit[index]) * d2Ynmst_dphi2[index]
+
+    grad_gradSpherical[:,0,0] = dAr_dr
+    grad_gradSpherical[:,0,1] = dAth_dr
+    grad_gradSpherical[index,0,2] = dAph_dr
+
+    grad_gradSpherical[:,1,0] = (dAr_dth - Ath)/rho
+    grad_gradSpherical[:,1,1] = (dAth_dth + Ar)/rho
+    grad_gradSpherical[index,1,2] = dAph_dth[index]/rho
+
+    grad_gradSpherical[index,2,0] = (dAr_dph[index]/sin(zenit[index]) - Aph[index])/rho[index]
+    grad_gradSpherical[index,2,1] = (dAth_dph[index]/sin(zenit[index]) - Aph[index]/tan(zenit[index]))/rho[index]
+    grad_gradSpherical[index,2,2] = (dAph_dph[index]/sin(zenit[index]) + Ar[index] + Ath[index]/tan(zenit[index]))/rho[index]
+
+    return grad_gradSpherical
+
+def vector_grad_rYnm(m, n, rho, azim, zenit, Ynm):
+
+    grad_gradPhi_sph = zeros((1,3,3), dtype=complex)
+
+    dYnm_dtheta   = Ynm_theta_derivative(m, n, azim, zenit, Ynm)
+    dYnm_dphi     = 1j*m*Ynm
+    d2Ynm_dtheta2 = Ynm_theta_2derivative(m, n, azim, zenit, Ynm, dYnm_dtheta) 
+    d2Ynm_dphi2   = -m**2*Ynm
+    d2Ynm_dthdphi = 1j*m*dYnm_dtheta
+
+    Ar = n*rho**(n-1)*Ynm
+    dAr_dr  = n*(n-1)*rho**(n-2)*Ynm
+    dAr_dth = n*rho**(n-1)*dYnm_dtheta
+    dAr_dph = n*rho**(n-1)*dYnm_dphi
+
+    Ath = rho**(n-1)*dYnm_dtheta
+    dAth_dr  = (n-1)*rho**(n-2) * dYnm_dtheta
+    dAth_dth = rho**(n-1) * d2Ynm_dtheta2 
+    dAth_dph = rho**(n-1) * d2Ynm_dthdphi
+
+    if abs(sin(zenit))>1e-10:
+        Aph = rho**(n-1)/sin(zenit) * dYnm_dphi
+        dAph_dr = (n-1)*rho**(n-2)/sin(zenit) * dYnm_dphi
+        dAph_dth = rho**(n-1)* (-cos(zenit)/sin(zenit)**2 * dYnm_dphi + 1/sin(zenit)*d2Ynm_dthdphi)
+        dAph_dph = rho**(n-1)/sin(zenit) * d2Ynm_dphi2
+    else:
+        Aph      = 0
+        dAph_dr  = 0
+        dAph_dth = 0
+        dAph_dph = 0
+
+    grad_gradPhi_sph[:,0,0] = dAr_dr
+    grad_gradPhi_sph[:,0,1] = dAth_dr
+    grad_gradPhi_sph[:,0,2] = dAph_dr
+
+    grad_gradPhi_sph[:,1,0] = (dAr_dth - Ath)/rho
+    grad_gradPhi_sph[:,1,1] = (dAth_dth + Ar)/rho
+    grad_gradPhi_sph[:,1,2] = dAph_dth/rho
+
+    if abs(sin(zenit))>1e-10:
+        grad_gradPhi_sph[0,2,0] = (dAr_dph/sin(zenit) - Aph)/rho
+        grad_gradPhi_sph[0,2,1] = (dAth_dph/sin(zenit) - Aph/tan(zenit))/rho
+        grad_gradPhi_sph[0,2,2] = (dAph_dph/sin(zenit) + Ar + Ath/tan(zenit))/rho
+    else:
+        grad_gradPhi_sph[0,2,:] = 0
+
+    return grad_gradPhi_sph
+
+
+
         
+def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
+        
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+
+    PHI  = zeros(len(q))
+    DPHI = zeros((len(q),3))
+    DDPHI = zeros((len(q),3,3))
+    for K in range(len(q)):
+        rho = sqrt(sum(xq[K]**2))
+        zenit = arccos(xq[K,2]/rho)
+        azim  = arctan2(xq[K,1],xq[K,0])
+
+        phi = 0.+0.*1j
+        dphi = zeros((1,3), dtype=complex)
+        ddphi = zeros((3,3), dtype=complex)
+        for n in range(N):
+            for m in range(-n,n+1):
+
+                Ynm = special.sph_harm(m,n,azim,zenit)
+                dYnm_dtheta = Ynm_theta_derivative(m, n, azim, zenit, Ynm)
+                dYnm_dphi = 1j*m*Ynm
+
+                gradPhi_sph = zeros((1,3), dtype=complex)
+                gradPhi_sph[:,0] = n*rho**(n-1)*Ynm
+                gradPhi_sph[:,1] = rho**(n-1)*dYnm_dtheta
+                gradPhi_sph[:,2] = rho**(n-1)*dYnm_dphi/sin(zenit)
+                gradPhi_cart = sph2cart_vector(gradPhi_sph, array([xq[K]]))
+
+                grad_gradPhi_sph = vector_grad_rYnm(m, n, rho, azim, zenit, Ynm)
+                grad_gradPhi_cart = sph2cart_tensor(grad_gradPhi_sph, array([xq[K]]))
+
+                C0 = 1/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
+
+                rho_k   = sqrt(sum(xq**2, axis=1))
+                zenit_k = arccos(xq[:,2]/rho_k)
+                azim_k  = arctan2(xq[:,1],xq[:,0])
+
+                Ynm_st   = conj(special.sph_harm(m,n,azim_k,zenit_k))
+                dYnmst_dtheta = Ynmst_theta_derivative(m,n,azim_k,zenit_k,Ynm_st)
+                dYnmst_dphi = -1j*m*Ynm_st
+
+#               Monopole
+                monopole = sum(q*rho_k**n*Ynm_st)
+
+#               Dipole
+#               p in rectangular coordinates
+                
+                gradSpherical = zeros((len(xq),3), dtype=complex)
+                gradSpherical[:,0] = n*rho_k**(n-1)*Ynm_st
+                gradSpherical[:,1] = rho_k**(n-1)*dYnmst_dtheta
+                gradSpherical[:,2] = rho_k**(n-1)*dYnmst_dphi/sin(zenit_k)
+
+                gradCartesian = sph2cart_vector(gradSpherical, xq)
+                    
+                dipole = -sum(p[:,0]*gradCartesian[:,0]) \
+                         - sum(p[:,1]*gradCartesian[:,1])  \
+                         - sum(p[:,2]*gradCartesian[:,2])
+#               print n,m,dipole
+
+#               Quadrupole
+#               Q is the traceless quadrupole moment
+
+                grad_gradSpherical = vector_grad_rYnmst(m, n, rho_k, azim_k, zenit_k, Ynm_st)
+                grad_gradCartesian = sph2cart_tensor(grad_gradSpherical, xq)
+                quadrupole = sum(Q[:,0,0]*grad_gradCartesian[:,0,0]) \
+                           + sum(Q[:,0,1]*grad_gradCartesian[:,0,1]) \
+                           + sum(Q[:,0,2]*grad_gradCartesian[:,0,2]) \
+                           + sum(Q[:,1,0]*grad_gradCartesian[:,1,0]) \
+                           + sum(Q[:,1,1]*grad_gradCartesian[:,1,1]) \
+                           + sum(Q[:,1,2]*grad_gradCartesian[:,1,2]) \
+                           + sum(Q[:,2,0]*grad_gradCartesian[:,2,0]) \
+                           + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
+                           + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
+
+                Enm = monopole + dipole + quadrupole 
+                
+                C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + \
+                    n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
+                C1 = 1/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
+
+                if n==0 and m==0:
+                    Bnm = Enm/(E_0*R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_0*E_2*a*(1+kappa*a))
+                else:
+                    Bnm = (C0 - C1*C2) * Enm
+
+                C3 = 4*pi/(2*n+1)
+                phi += Bnm * Ynm * rho**n * C3
+                dphi += Bnm * gradPhi_cart * C3
+                ddphi += Bnm * grad_gradPhi_cart[0] * C3
+        
+        PHI[K]   = real(phi)/(4*pi)
+        DPHI[K]  = real(dphi)/(4*pi)
+        DDPHI[K] = real(ddphi)/(4*pi)
+
+    cons = qe**2*Na*1e-3*1e10/(cal2J)
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+
+    return E_P
+
+
+
+def an_multipole_2(q, p, Q, xq, E_1, E_2, R, N):
+        
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+
+    PHI  = zeros(len(q))
+    DPHI = zeros((len(q),3))
+    for K in range(len(q)):
+        rho = sqrt(sum(xq[K]**2))
+        zenit = arccos(xq[K,2]/rho)
+        azim  = arctan2(xq[K,1],xq[K,0])
+
+        phi = 0.+0.*1j
+        dphi = zeros((1,3), dtype=complex)
+        for n in range(N):
+            for m in range(-n,n+1):
+                Ynm   = special.sph_harm(m,n,azim,zenit)
+                Ynmp1 = special.sph_harm(m+1,n,azim,zenit)
+                Ynmm1 = special.sph_harm(m-1,n,azim,zenit)
+                dYnm_dtheta = zeros(len(xq), dtype=complex)
+                if m==0 and n==0:
+                    dYnm_dtheta = 0
+                elif zenit==0:
+                    dYnm_dtheta = 0.
+                elif m+1<n:
+                    dYnm_dtheta =  sqrt((n-m)*(n+m+1))*exp(-1j*azim)*Ynmp1 \
+                                        + m/tan(zenit)*Ynm
+                else:
+                    dYnm_dtheta =  -sqrt((n+m)*(n-m+1))*exp(1j*azim)*Ynmm1 \
+                                        - m/tan(zenit)*Ynm
+
+                dYnm_dphi = 1j*m*Ynm
+
+                gradPhi_sph = zeros((len(xq),3), dtype=complex)
+                gradPhi_sph[:,0] = n*rho**(n-1)*Ynm
+                gradPhi_sph[:,1] = rho**(n-1)*dYnm_dtheta
+                gradPhi_sph[:,2] = rho**(n-1)*dYnm_dphi/sin(zenit)
+
+                gradPhi_cart = sph2cart(gradPhi_sph, array([xq[K]]))
+
+                rho_k   = sqrt(sum(xq**2, axis=1))
+                zenit_k = arccos(xq[:,2]/rho_k)
+                azim_k  = arctan2(xq[:,1],xq[:,0])
+
+                Ynm_st   = conj(special.sph_harm(m,n,azim_k,zenit_k))
+                Ynmp1_st = conj(special.sph_harm(m+1,n,azim_k,zenit_k))
+                Ynmm1_st = conj(special.sph_harm(m-1,n,azim_k,zenit_k))
+
+#               Monopole
+                monopole = sum(q*rho_k**n*Ynm_st)
+
+#               Dipole
+#               p in rectangular coordinates
+                
+                index = where(abs(zenit_k)>1e-10)[0] # Indices where theta is nonzero
+                dYnmst_dtheta = zeros(len(xq), dtype=complex)
+                if m==0 and n==0:
+                    dYnmst_dtheta = 0
+                elif m+1<n:
+                    dYnmst_dtheta[index] =  sqrt((n-m)*(n+m+1))*exp(1j*azim_k[index])*Ynmp1_st[index] \
+                                        + m/tan(zenit_k[index])*Ynm_st[index]
+                else:
+                    dYnmst_dtheta[index] =  -sqrt((n+m)*(n-m+1))*exp(-1j*azim_k[index])*Ynmm1_st[index] \
+                                        - m/tan(zenit_k[index])*Ynm_st[index]
+
+                dYnmst_dphi = -1j*m*Ynm_st
+
+                gradSpherical = zeros((len(xq),3), dtype=complex)
+                gradSpherical[:,0] = n*rho_k**(n-1)*Ynm_st
+                gradSpherical[:,1] = rho_k**(n-1)*dYnmst_dtheta
+                gradSpherical[:,2] = rho_k**(n-1)*dYnmst_dphi/sin(zenit_k)
+
+                gradCartesian = sph2cart(gradSpherical, xq)
+                    
+                dipole = -sum(p[:,0]*gradCartesian[:,0]) \
+                         - sum(p[:,1]*gradCartesian[:,1])  \
+                         - sum(p[:,2]*gradCartesian[:,2])
+
+                qnm = monopole + dipole
+
+                K1   = special.kv(n+0.5, kappa*R)
+                K1p1 = special.kv(n+1.5, kappa*R)
+                K1p = (n+0.5)/(kappa*R)*K1 - K1p1
+
+                k = special.kv(n+0.5, kappa*R)*sqrt(pi/(2*kappa*R))
+                kp = -sqrt(pi/2)*1/(2*(kappa*R)**(3/2.))*special.kv(n+0.5, kappa*R) + sqrt(pi/(2*kappa*R))*K1p
+                C0 = (E_1*(n+1)*k + E_2*R*kappa*kp)/(E_1*n*k - E_2*kappa*R*kp)
+
+                Bnm = 4*pi/(E_1*(2*n+1)) * qnm/R**(2*n+1) * C0
+
+                phi += Bnm * Ynm * rho**n 
+                dphi += Bnm * gradPhi_cart
+        
+        PHI[K] = real(phi)/(4*pi)
+        DPHI[K] = abs(dphi)/(4*pi)
+
+    cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)))
+
+    return E_P
+
+def an_spherical(q, xq, E_1, E_2, R, N):
+        
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+
     PHI = zeros(len(q))
     for K in range(len(q)):
         rho = sqrt(sum(xq[K]**2))
@@ -41,20 +487,34 @@ def an_spherical(q, xq, E_1, E_2, E_0, R, N):
         phi = 0.+0.*1j
         for n in range(N):
             for m in range(-n,n+1):
-                sph1 = special.sph_harm(m,n,zenit,azim)
-                cons1 = rho**n/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
-                cons2 = 4*pi/(2*n+1)
+                sph1 = special.sph_harm(m,n,azim,zenit)
+                C0 = 1/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
 
-                for k in range(len(q)):
-                    rho_k   = sqrt(sum(xq[k]**2))
-                    zenit_k = arccos(xq[k,2]/rho_k)
-                    azim_k  = arctan2(xq[k,1],xq[k,0])
-                    sph2 = conj(special.sph_harm(m,n,zenit_k,azim_k))
-                    phi += cons1*cons2*q[K]*rho_k**n*sph1*sph2
+                rho_k   = sqrt(sum(xq**2, axis=1))
+                zenit_k = arccos(xq[:,2]/rho_k)
+                azim_k  = arctan2(xq[:,1],xq[:,0])
+                sph2 = conj(special.sph_harm(m,n,azim_k,zenit_k))
+
+                Enm = sum(q*rho_k**n*sph2) # qlm in Jackson
+
+                C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + 
+                        n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
+                C1 = 1/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
+
+                if n==0 and m==0:
+                    Bnm = Enm/(E_0*R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_0*E_2*a*(1+kappa*a))
+                else:
+                    Bnm = (C0 - C1*C2) * Enm
+
+                C3 = 4*pi/(2*n+1)
+                phi += Bnm * sph1 * rho**n * C3
         
         PHI[K] = real(phi)/(4*pi)
 
-    return PHI
+    C0 = qe**2*Na*1e-3*1e10/(cal2J)
+    E_P = 0.5*C0*sum(q*PHI)
+
+    return E_P
 
 def get_K(x,n):
 
@@ -65,7 +525,6 @@ def get_K(x,n):
         K += 2**s*n_fact*factorial(2*n-s)/(factorial(s)*n_fact2*factorial(n-s)) * x**s
 
     return K
-
 
 def an_P(q, xq, E_1, E_2, R, kappa, a, N):
 
@@ -104,6 +563,54 @@ def an_P(q, xq, E_1, E_2, R, kappa, a, N):
                     Bnm = 1./(E_1*E_0*R**(2*n+1)) * (E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1)) * Enm - C1*C2
 
                 phi += Bnm*rho**n*P1*exp(1j*m*azim)
+
+        PHI[K] = real(phi)/(4*pi)
+
+    C0 = qe**2*Na*1e-3*1e10/(cal2J)
+    E_P = 0.5*C0*sum(q*PHI)
+
+    return E_P
+
+
+def an_spherical2(q, xq, E_1, E_2, R, kappa, a, N):
+
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+
+    PHI = zeros(len(q))
+    for K in range(len(q)):
+        rho = sqrt(sum(xq[K]**2))
+        zenit = arccos(xq[K,2]/rho)
+        azim  = arctan2(xq[K,1],xq[K,0])
+
+        phi = 0.+0.*1j
+        for n in range(N):
+            for m in range(-n,n+1):
+                P1 = lpmv(abs(m),n,cos(zenit))
+
+                Enm = 0.
+                for k in range(len(q)):
+                    rho_k   = sqrt(sum(xq[k]**2))
+                    zenit_k = arccos(xq[k,2]/rho_k)
+                    azim_k  = arctan2(xq[k,1],xq[k,0])
+                    P2 = lpmv(abs(m),n,cos(zenit_k))
+
+#                    Enm += q[k]*rho_k**n*factorial(n-abs(m))/factorial(n+abs(m))*P2*exp(-1j*m*azim_k)
+                    Enm += q[k]*rho_k**n*conjugate(special.sph_harm(m, n, azim_k, zenit_k))
+    
+                C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + 
+                        n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
+                C1 = Enm/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
+
+                if n==0 and m==0:
+                    Bnm = (Enm/(E_0*R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_0*E_2*a*(1+kappa*a)))*4*pi/(2*n+1)
+                else:
+                    Bnm = (1./(E_1*E_0*R**(2*n+1)) * (E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1)) * Enm  - C1*C2)* 4*pi/(2*n+1)
+
+#                phi += Bnm*rho**n*P1*exp(1j*m*azim)
+                phi += Bnm*rho**n*special.sph_harm(m, n, azim, zenit)
 
         PHI[K] = real(phi)/(4*pi)
 
@@ -869,25 +1376,33 @@ E_inter = constant_potential_twosphere(phi01, phi02, r1, r2, R, kappa, epsilon)
 print E_inter
 '''
 
-'''
-q   = array([1.60217646e-19])
-xq  = array([[1e-10,1e-10,0.]])
-E_1 = 4.
-E_2 = 80.
+
+q   = array([0.,])
+p   = array([[1.,0.,0.]])
+Q   = array([[[-0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]])
+xq  = array([[0.,1e-16,0.]])
+E_1 = 1.
+E_2 = 78.3
 E_0 = 8.854187818e-12
-R   = 1.
-N   = 10
-Q   = 1
+R   = 3.
+N   = 2
 Na  = 6.0221415e23
 a   = R
-kappa = 0.125
+kappa = 0.
 
-#PHI_sph = an_spherical(q, xq, E_1, E_2, E_0, R, N)
-PHI_P = an_P(q, xq, E_1, E_2, E_0, R, kappa, a, N)
+energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
+energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
+energy_mult = an_multipole(q, p, Q, xq, E_1, E_2, R, N)
+#energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-JtoCal = 4.184    
+print energy
+print energy_sph
+print energy_mult
+#print energy_mult2
+
+#JtoCal = 4.184    
 #E_solv_sph = 0.5*sum(q*PHI_sph)*Na*1e7/JtoCal
-E_solv_P = 0.5*sum(q*PHI_P)*Na*1e7/JtoCal
+#E_solv_P = 0.5*sum(q*PHI_P)*Na*1e7/JtoCal
 #print 'With spherical harmonics: %f'%E_solv_sph
-print 'With Legendre functions : %f'%E_solv_P
-'''
+#print 'With Legendre functions : %f'%E_solv_P
+
