@@ -321,10 +321,9 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
 
                 gradCartesian = sph2cart_vector(gradSpherical, xq)
                     
-                dipole = -sum(p[:,0]*gradCartesian[:,0]) \
-                         - sum(p[:,1]*gradCartesian[:,1])  \
-                         - sum(p[:,2]*gradCartesian[:,2])
-#               print n,m,dipole
+                dipole = sum(p[:,0]*gradCartesian[:,0]) \
+                         + sum(p[:,1]*gradCartesian[:,1])  \
+                         + sum(p[:,2]*gradCartesian[:,2])
 
 #               Quadrupole
 #               Q is the traceless quadrupole moment
@@ -340,6 +339,7 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
                            + sum(Q[:,2,0]*grad_gradCartesian[:,2,0]) \
                            + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                            + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
+            
 
                 Enm = monopole + dipole + quadrupole 
                 
@@ -1378,14 +1378,14 @@ print E_inter
 
 
 q   = array([0.,])
-p   = array([[1.,0.,0.]])
-Q   = array([[[-0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]])
-xq  = array([[0.,1e-16,0.]])
+p   = array([[0.,0.,0.]])
+Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
+xq  = array([[1e-16,1e-16,-1e-16]])
 E_1 = 1.
 E_2 = 78.3
 E_0 = 8.854187818e-12
 R   = 3.
-N   = 2
+N   = 3
 Na  = 6.0221415e23
 a   = R
 kappa = 0.
