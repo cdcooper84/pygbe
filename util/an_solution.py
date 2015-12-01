@@ -181,7 +181,10 @@ def vector_grad_rYnmst(m, n, rho, azim, zenit, Ynm_st):
     d2Ynmst_dphi2   = -m**2*Ynm_st
     d2Ynmst_dthdphi = -1j*m*dYnmst_dtheta
 
-    index = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
+    i_th = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
+    i_rh = where(rho>1e-16)[0]        # Indices where rho is nonzero
+    i_tr = where(rho>1e-16 and abs(zenit)>1e-10)[0] # Indices where rho and
+                                                    # theta are nonzero
 
     Ar = n*rho**(n-1)*Ynm_st
     dAr_dr  = n*(n-1)*rho**(n-2)*Ynm_st
@@ -193,23 +196,27 @@ def vector_grad_rYnmst(m, n, rho, azim, zenit, Ynm_st):
     dAth_dth = rho**(n-1) * d2Ynmst_dtheta2 
     dAth_dph = rho**(n-1) * d2Ynmst_dthdphi
 
-    Aph = rho**(n-1)/sin(zenit) * dYnmst_dphi
-    dAph_dr = (n-1)*rho[index]**(n-2)/sin(zenit[index]) * dYnmst_dphi[index]
-    dAph_dth = rho[index]**(n-1)* \
-        (-cos(zenit[index])/sin(zenit[index])**2 * dYnmst_dphi[index] + 1/sin(zenit[index])*d2Ynmst_dthdphi[index])
-    dAph_dph = rho[index]**(n-1)/sin(zenit[index]) * d2Ynmst_dphi2[index]
+    Aph      = zeros(shape(Ar), dtype=complex)
+    dAph_dr  = zeros(shape(Ar), dtype=complex)
+    dAph_dth = zeros(shape(Ar), dtype=complex)
+    dAph_dph = zeros(shape(Ar), dtype=complex)
+    Aph[i_th]      = rho[i_th]**(n-1)/sin(zenit[i_th]) * dYnmst_dphi[i_th]
+    dAph_dr[i_th]  = (n-1)*rho[i_th]**(n-2)/sin(zenit[i_th]) * dYnmst_dphi[i_th]
+    dAph_dth[i_th] = rho[i_th]**(n-1)* (-cos(zenit[i_th])/sin(zenit[i_th])**2 \
+                    * dYnmst_dphi[i_th] + 1/sin(zenit[i_th])*d2Ynmst_dthdphi[i_th])
+    dAph_dph[i_th] = rho[i_th]**(n-1)/sin(zenit[i_th]) * d2Ynmst_dphi2[i_th]
 
     grad_gradSpherical[:,0,0] = dAr_dr
     grad_gradSpherical[:,0,1] = dAth_dr
-    grad_gradSpherical[index,0,2] = dAph_dr
+    grad_gradSpherical[:,0,2] = dAph_dr
 
-    grad_gradSpherical[:,1,0] = (dAr_dth - Ath)/rho
-    grad_gradSpherical[:,1,1] = (dAth_dth + Ar)/rho
-    grad_gradSpherical[index,1,2] = dAph_dth[index]/rho
+    grad_gradSpherical[i_rh,1,0] = (dAr_dth - Ath)[i_rh]/rho[i_rh]
+    grad_gradSpherical[i_rh,1,1] = (dAth_dth + Ar)[i_rh]/rho[i_rh]
+    grad_gradSpherical[i_rh,1,2] = dAph_dth[i_rh]/rho[i_rh]
 
-    grad_gradSpherical[index,2,0] = (dAr_dph[index]/sin(zenit[index]) - Aph[index])/rho[index]
-    grad_gradSpherical[index,2,1] = (dAth_dph[index]/sin(zenit[index]) - Aph[index]/tan(zenit[index]))/rho[index]
-    grad_gradSpherical[index,2,2] = (dAph_dph[index]/sin(zenit[index]) + Ar[index] + Ath[index]/tan(zenit[index]))/rho[index]
+    grad_gradSpherical[i_tr,2,0] = (dAr_dph[i_tr]/sin(zenit[i_tr]) - Aph[i_tr])/rho[i_tr]
+    grad_gradSpherical[i_tr,2,1] = (dAth_dph[i_tr]/sin(zenit[i_tr]) - Aph[i_tr]/tan(zenit[i_tr]))/rho[i_tr]
+    grad_gradSpherical[i_tr,2,2] = (dAph_dph[i_tr]/sin(zenit[i_tr]) + Ar[i_tr] + Ath[i_tr]/tan(zenit[i_tr]))/rho[i_tr]
 
     return grad_gradSpherical
 
@@ -340,8 +347,7 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
                            + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                            + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
             
-
-                Enm = monopole + dipole + quadrupole 
+                Enm = monopole + dipole + quadrupole
                 
                 C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + \
                     n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
@@ -362,6 +368,7 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
         DDPHI[K] = real(ddphi)/(4*pi)
 
     cons = qe**2*Na*1e-3*1e10/(cal2J)
+    print cons/(4*pi*E_0)
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
     return E_P
@@ -1379,8 +1386,8 @@ print E_inter
 
 q   = array([0.,])
 p   = array([[0.,0.,0.]])
-Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
-xq  = array([[1e-16,1e-16,-1e-16]])
+Q   = array([[[-1.,0.,0.],[0.,1.,0.],[0.,0.,0.]]])
+xq  = array([[1e-10,1e-10,-1e-10]])
 E_1 = 1.
 E_2 = 78.3
 E_0 = 8.854187818e-12
