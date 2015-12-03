@@ -138,13 +138,14 @@ def Ynmst_theta_2derivative(m, n, azim, zenit, Ynm_st, dYnmst_dtheta):
         dYnmp1st_dtheta = -sqrt((n+m+1)*(n-m))*exp(-1j*azim[index])*Ynm_st[index] \
                             - (m+1)/tan(zenit[index])*Ynmp1_st[index]
         d2Ynmst_dtheta2[index] =  sqrt((n-m)*(n+m+1))*exp(1j*azim[index])*dYnmp1st_dtheta \
-                                + m*(-1/sin(zenit[index])*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
+                                + m*(-1/sin(zenit[index])**2*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
 
     else:
         dYnmm1st_dtheta = sqrt((n-m+1)*(n+m))*exp(1j*azim[index])*Ynm_st[index] \
                         + (m-1) * 1/tan(zenit[index])*Ynmm1_st[index]
         d2Ynmst_dtheta2[index] =  -sqrt((n+m)*(n-m+1))*exp(-1j*azim[index])*dYnmm1st_dtheta \
-                                - m*(-1/sin(zenit[index])*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
+                                - m*(-1/sin(zenit[index])**2*Ynm_st + 1/tan(zenit[index])*dYnmst_dtheta[index])
+
     return d2Ynmst_dtheta2
 
 def Ynm_theta_2derivative(m, n, azim, zenit, Ynm, dYnm_dtheta):
@@ -161,13 +162,13 @@ def Ynm_theta_2derivative(m, n, azim, zenit, Ynm, dYnm_dtheta):
         dYnmp1_dtheta = -sqrt((n+m+1)*(n-m))*exp(1j*azim)*Ynm \
                             - (m+1)/tan(zenit)*Ynmp1
         d2Ynm_dtheta2 =  sqrt((n-m)*(n+m+1))*exp(-1j*azim)*dYnmp1_dtheta \
-                                + m*(-1/sin(zenit)*Ynm + 1/tan(zenit)*dYnm_dtheta)
+                                + m*(-1/sin(zenit)**2*Ynm + 1/tan(zenit)*dYnm_dtheta)
 
     else:
         dYnmm1_dtheta = sqrt((n-m+1)*(n+m))*exp(-1j*azim)*Ynm \
                         + (m-1) * 1/tan(zenit)*Ynmm1
         d2Ynm_dtheta2 =  -sqrt((n+m)*(n-m+1))*exp(1j*azim)*dYnmm1_dtheta \
-                                - m*(-1/sin(zenit)*Ynm + 1/tan(zenit)*dYnm_dtheta)
+                                - m*(-1/sin(zenit)**2*Ynm + 1/tan(zenit)*dYnm_dtheta)
 
     return d2Ynm_dtheta2
 
@@ -211,6 +212,7 @@ def vector_grad_rYnmst(m, n, rho, azim, zenit, Ynm_st):
     grad_gradSpherical[:,0,2] = dAph_dr
 
     grad_gradSpherical[i_rh,1,0] = (dAr_dth - Ath)[i_rh]/rho[i_rh]
+
     grad_gradSpherical[i_rh,1,1] = (dAth_dth + Ar)[i_rh]/rho[i_rh]
     grad_gradSpherical[i_rh,1,2] = dAph_dth[i_rh]/rho[i_rh]
 
@@ -368,7 +370,7 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
         DDPHI[K] = real(ddphi)/(4*pi)
 
     cons = qe**2*Na*1e-3*1e10/(cal2J)
-    print cons/(4*pi*E_0)
+    
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
     return E_P
@@ -1386,8 +1388,8 @@ print E_inter
 
 q   = array([0.,])
 p   = array([[0.,0.,0.]])
-Q   = array([[[-1.,0.,0.],[0.,1.,0.],[0.,0.,0.]]])
-xq  = array([[1e-10,1e-10,-1e-10]])
+Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
+xq  = array([[-1e-10,1e-10,-1e-10]])
 E_1 = 1.
 E_2 = 78.3
 E_0 = 8.854187818e-12
