@@ -270,7 +270,131 @@ def vector_grad_rYnm(m, n, rho, azim, zenit, Ynm):
 
     return grad_gradPhi_sph
 
+def computeMultipoleMoment(m, n, q, p, Q, xq):
 
+    rho_k   = sqrt(sum(xq**2, axis=1))
+    zenit_k = arccos(xq[:,2]/rho_k)
+    azim_k  = arctan2(xq[:,1],xq[:,0])
+
+    Ynm_st   = conj(special.sph_harm(m,n,azim_k,zenit_k))
+    dYnmst_dtheta = Ynmst_theta_derivative(m,n,azim_k,zenit_k,Ynm_st)
+    dYnmst_dphi = -1j*m*Ynm_st
+
+#   Monopole
+    monopole = sum(q*rho_k**n*Ynm_st)
+
+#   Dipole
+#   p in rectangular coordinates
+    
+    gradSpherical = zeros((len(xq),3), dtype=complex)
+    gradSpherical[:,0] = n*rho_k**(n-1)*Ynm_st
+    gradSpherical[:,1] = rho_k**(n-1)*dYnmst_dtheta
+    gradSpherical[:,2] = rho_k**(n-1)*dYnmst_dphi/sin(zenit_k)
+
+    gradCartesian = sph2cart_vector(gradSpherical, xq)
+        
+    dipole = sum(p[:,0]*gradCartesian[:,0]) \
+             + sum(p[:,1]*gradCartesian[:,1])  \
+             + sum(p[:,2]*gradCartesian[:,2])
+
+#   Quadrupole
+#   Q is the traceless quadrupole moment
+
+    grad_gradSpherical = vector_grad_rYnmst(m, n, rho_k, azim_k, zenit_k, Ynm_st)
+    grad_gradCartesian = sph2cart_tensor(grad_gradSpherical, xq)
+    quadrupole = sum(Q[:,0,0]*grad_gradCartesian[:,0,0]) \
+               + sum(Q[:,0,1]*grad_gradCartesian[:,0,1]) \
+               + sum(Q[:,0,2]*grad_gradCartesian[:,0,2]) \
+               + sum(Q[:,1,0]*grad_gradCartesian[:,1,0]) \
+               + sum(Q[:,1,1]*grad_gradCartesian[:,1,1]) \
+               + sum(Q[:,1,2]*grad_gradCartesian[:,1,2]) \
+               + sum(Q[:,2,0]*grad_gradCartesian[:,2,0]) \
+               + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
+               + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
+
+    return monopole + dipole + quadrupole
+
+def computeYnm_derivatives(m,n,xq_k):
+
+    rho = sqrt(sum(xq_k**2))
+    zenit = arccos(xq_k[2]/rho)
+    azim  = arctan2(xq_k[1],xq_k[0])
+
+    Ynm = special.sph_harm(m,n,azim,zenit)
+    dYnm_dtheta = Ynm_theta_derivative(m, n, azim, zenit, Ynm)
+    dYnm_dphi = 1j*m*Ynm
+
+    gradPhi_sph = zeros((1,3), dtype=complex)
+    gradPhi_sph[:,0] = n*rho**(n-1)*Ynm
+    gradPhi_sph[:,1] = rho**(n-1)*dYnm_dtheta
+    gradPhi_sph[:,2] = rho**(n-1)*dYnm_dphi/sin(zenit)
+    gradPhi_cart = sph2cart_vector(gradPhi_sph, array([xq_k]))
+
+    grad_gradPhi_sph = vector_grad_rYnm(m, n, rho, azim, zenit, Ynm)
+    grad_gradPhi_cart = sph2cart_tensor(grad_gradPhi_sph, array([xq_k]))
+
+    return rho**n*Ynm, gradPhi_cart, grad_gradPhi_cart
+
+
+def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
+        
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+    Energy_diff = 1.
+    E_P_prev = 0.
+
+    PHI  = zeros(len(q))
+    DPHI = zeros((len(q),3))
+    DDPHI = zeros((len(q),3,3))
+
+    while Energy_diff>1e-5:
+    
+        p_pol = p + alpha*DPHI
+
+        for K in range(len(q)):
+
+            phi = 0.+0.*1j
+            dphi = zeros((1,3), dtype=complex)
+            ddphi = zeros((3,3), dtype=complex)
+            for n in range(N):
+                for m in range(-n,n+1):
+
+                    Enm = computeMultipoleMoment(m, n, q, p_pol, Q, xq) 
+                    
+                    C0 = 1/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
+                    C1 = 1/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
+                    C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + \
+                        n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
+
+                    if n==0 and m==0:
+                        Bnm = Enm/(E_0*R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_0*E_2*a*(1+kappa*a))
+                    else:
+                        Bnm = (C0 - C1*C2) * Enm
+
+
+                    rhoYnm, gradPhi, grad_gradPhi = computeYnm_derivatives(m, n, xq[K])
+                    
+                    C3 = 4*pi/(2*n+1)
+                    phi += Bnm * rhoYnm * C3
+                    dphi += Bnm * gradPhi * C3
+                    ddphi += Bnm * grad_gradPhi[0] * C3
+            
+            PHI[K]   = real(phi)/(4*pi)
+            DPHI[K]  = real(dphi)/(4*pi)
+            DDPHI[K] = real(ddphi)/(4*pi)
+
+            cons = qe**2*Na*1e-3*1e10/(cal2J)
+            
+            E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p_pol*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+
+            Energy_diff = abs(E_P-E_P_prev)/abs(E_P)
+
+            E_P_prev = E_P
+            print E_P
+
+    return E_P
 
         
 def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
@@ -1387,14 +1511,15 @@ print E_inter
 
 
 q   = array([0.,])
-p   = array([[0.,0.,0.]])
-Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
-xq  = array([[-1e-10,1e-10,-1e-10]])
+p   = array([[1.,0.,0.]])
+Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,-0.]]])
+alpha = 0.
+xq  = array([[-1e-10,1e-10,1e-10]])
 E_1 = 1.
 E_2 = 78.3
 E_0 = 8.854187818e-12
 R   = 3.
-N   = 3
+N   = 10
 Na  = 6.0221415e23
 a   = R
 kappa = 0.
@@ -1402,11 +1527,13 @@ kappa = 0.
 energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
 energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
 energy_mult = an_multipole(q, p, Q, xq, E_1, E_2, R, N)
+energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
 print energy
 print energy_sph
 print energy_mult
+print energy_mult_pol
 #print energy_mult2
 
 #JtoCal = 4.184    
