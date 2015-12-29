@@ -348,11 +348,13 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
     PHI  = zeros(len(q))
     DPHI = zeros((len(q),3))
     DDPHI = zeros((len(q),3,3))
+    p_pol = zeros((len(q),3))
 
     while Energy_diff>1e-5:
     
-        p_pol = p + alpha*DPHI
-
+        for K in range(len(q)):
+            p_pol[K] = p[K] - dot(alpha[K],DPHI[K])
+        print p_pol
         for K in range(len(q)):
 
             phi = 0.+0.*1j
@@ -387,12 +389,12 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
 
             cons = qe**2*Na*1e-3*1e10/(cal2J)
             
-            E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p_pol*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+            E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
             Energy_diff = abs(E_P-E_P_prev)/abs(E_P)
 
             E_P_prev = E_P
-            print E_P
+            print DPHI,E_P
 
     return E_P
 
@@ -1513,7 +1515,7 @@ print E_inter
 q   = array([0.,])
 p   = array([[1.,0.,0.]])
 Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,-0.]]])
-alpha = 0.
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*1e-5
 xq  = array([[-1e-10,1e-10,1e-10]])
 E_1 = 1.
 E_2 = 78.3
