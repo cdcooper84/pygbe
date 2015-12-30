@@ -343,7 +343,6 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
     E_0 = 8.854187818e-12
     cal2J = 4.184 
     dipole_diff = 1.
-    E_P_prev = 0.
 
     PHI  = zeros(len(q))
     DPHI = zeros((len(q),3))
@@ -351,7 +350,7 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
     p_pol = zeros((len(q),3))
     p_pol_prev = ones((len(q),3))
 
-    while dipole_diff>1e-5:
+    while dipole_diff>1e-10:
     
         for K in range(len(q)):
             p_pol[K] = -dot(alpha[K],DPHI[K])
@@ -368,13 +367,13 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
 
                     Enm = computeMultipoleMoment(m, n, q, p_tot, Q, xq) 
                     
-                    C0 = 1/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
-                    C1 = 1/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
+                    C0 = 1/(E_1*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
+                    C1 = 1/(E_2*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
                     C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + \
                         n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
 
                     if n==0 and m==0:
-                        Bnm = Enm/(E_0*R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_0*E_2*a*(1+kappa*a))
+                        Bnm = Enm/(R)*(1/E_2-1/E_1) - Enm*kappa*a/(E_2*a*(1+kappa*a))
                     else:
                         Bnm = (C0 - C1*C2) * Enm
 
@@ -386,14 +385,14 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
                     dphi += Bnm * gradPhi * C3
                     ddphi += Bnm * grad_gradPhi[0] * C3
             
-            PHI[K]   = real(phi)/(4*pi)
-            DPHI[K]  = real(dphi)/(4*pi)
-            DDPHI[K] = real(ddphi)/(4*pi)
+            PHI[K]   = real(phi)
+            DPHI[K]  = real(dphi)
+            DDPHI[K] = real(ddphi)
 
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
-    cons = qe**2*Na*1e-3*1e10/(cal2J)
+    cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
     
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
