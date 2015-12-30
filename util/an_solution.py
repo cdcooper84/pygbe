@@ -342,19 +342,22 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
     Na = 6.0221415e23
     E_0 = 8.854187818e-12
     cal2J = 4.184 
-    Energy_diff = 1.
+    dipole_diff = 1.
     E_P_prev = 0.
 
     PHI  = zeros(len(q))
     DPHI = zeros((len(q),3))
     DDPHI = zeros((len(q),3,3))
     p_pol = zeros((len(q),3))
+    p_pol_prev = ones((len(q),3))
 
-    while Energy_diff>1e-5:
+    while dipole_diff>1e-5:
     
         for K in range(len(q)):
-            p_pol[K] = p[K] - dot(alpha[K],DPHI[K])
-        print p_pol
+            p_pol[K] = -dot(alpha[K],DPHI[K])
+        
+        p_tot = p + p_pol
+
         for K in range(len(q)):
 
             phi = 0.+0.*1j
@@ -363,7 +366,7 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
             for n in range(N):
                 for m in range(-n,n+1):
 
-                    Enm = computeMultipoleMoment(m, n, q, p_pol, Q, xq) 
+                    Enm = computeMultipoleMoment(m, n, q, p_tot, Q, xq) 
                     
                     C0 = 1/(E_1*E_0*R**(2*n+1))*(E_1-E_2)*(n+1)/(E_1*n+E_2*(n+1))
                     C1 = 1/(E_2*E_0*a**(2*n+1)) * (2*n+1)/(2*n-1) * (E_2/((n+1)*E_2+n*E_1))**2
@@ -387,14 +390,12 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
             DPHI[K]  = real(dphi)/(4*pi)
             DDPHI[K] = real(ddphi)/(4*pi)
 
-            cons = qe**2*Na*1e-3*1e10/(cal2J)
-            
-            E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+        dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
+        p_pol_prev = p_pol.copy()
 
-            Energy_diff = abs(E_P-E_P_prev)/abs(E_P)
-
-            E_P_prev = E_P
-            print DPHI,E_P
+    cons = qe**2*Na*1e-3*1e10/(cal2J)
+    
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
     return E_P
 
@@ -1515,7 +1516,7 @@ print E_inter
 q   = array([0.,])
 p   = array([[1.,0.,0.]])
 Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,-0.]]])
-alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*1e-5
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*1.
 xq  = array([[-1e-10,1e-10,1e-10]])
 E_1 = 1.
 E_2 = 78.3
