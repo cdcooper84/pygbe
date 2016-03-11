@@ -350,6 +350,7 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
     p_pol = zeros((len(q),3))
     p_pol_prev = ones((len(q),3))
 
+    iterations = 0
     while dipole_diff>1e-10:
     
         for K in range(len(q)):
@@ -389,9 +390,12 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
             DPHI[K]  = real(dphi)
             DDPHI[K] = real(ddphi)
 
+        iterations += 1
+
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
+    print iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
     
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
