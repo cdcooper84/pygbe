@@ -118,6 +118,7 @@ for pqr_file in pqr_files_array:
 
     write_config_file(config_filename, mesh_files, mesh_type, pqr_file)
 
+"""
 # Run cases
 print 'ASYMMETRIC RUNS'
 Esolv_asym = numpy.zeros(len(config_filename_array)) 
@@ -176,3 +177,4 @@ for i, config_filename in enumerate(config_filename_array):
     i2 = srf_file.find('.')
 
     print srf_file[i2-6:i2]+'\t'+pqr_file[i1-3:i1]+'\t'+Esolv_sym[i]
+"""
