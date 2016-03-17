@@ -45,7 +45,11 @@ from util.an_solution import an_P, two_sphere
 from util.which import whichgen
 
 from tree.FMMutils import computeIndices, precomputeTerms, generateList
-from tree.cuda_kernels import kernels
+
+try:
+    from tree.cuda_kernels import kernels
+except:
+    pass
 
 #courtesy of http://stackoverflow.com/a/5916874
 class Logger(object):
@@ -143,10 +147,10 @@ def check_for_nvcc():
     try:
         whichgen('nvcc').next()
     except StopIteration:
-        sys.exit("Could not find `nvcc` on your PATH.  Is cuda installed?")
+        print("Could not find `nvcc` on your PATH.  Is cuda installed?  PyGBe will continue to run but will run significantly slower.  For optimal performance, add `nvcc` to your PATH")
 
 
-def main(argv=sys.argv):
+def main(log_output=True):
 
     check_for_nvcc()
 
@@ -171,7 +175,8 @@ def main(argv=sys.argv):
 
     timestamp = time.localtime()
     outputfname = '{:%Y-%m-%d-%H%M%S}-output.log'.format(datetime.now())
-    sys.stdout = Logger(os.path.join(output_dir, outputfname))
+    if log_output:
+        sys.stdout = Logger(os.path.join(output_dir, outputfname))
     ### Time stamp
     print 'Run started on:'
     print '\tDate: %i/%i/%i'%(timestamp.tm_year,timestamp.tm_mon,timestamp.tm_mday)
@@ -229,7 +234,10 @@ def main(argv=sys.argv):
     precomputeTerms(param.P, ind0)
 
     ### Load CUDA code
-    kernel = kernels(param.BSZ, param.Nm, param.K_fine, param.P, precision)
+    if param.GPU==1:
+        kernel = kernels(param.BSZ, param.Nm, param.K_fine, param.P, precision)
+    else:
+        kernel = 1
 
     ### Generate interaction list
     print 'Generate interaction list'
