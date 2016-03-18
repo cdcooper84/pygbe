@@ -110,7 +110,11 @@ def readpqr(filename, REAL):
         line_aux = []
 
         if line[0]=='ATOM':
-            for l in range(len(line)-6):
+            if len(line)<12:
+                n_data = len(line)-6
+            else:
+                n_data = len(line)-18
+            for l in range(n_data):
                 aux = line[5+len(line_aux)]
                 if len(aux)>14:
                     X = readCheck(aux,REAL)
@@ -121,12 +125,19 @@ def readpqr(filename, REAL):
 #                    line_test.append(line[5+len(line_aux)])
                     line_aux.append(REAL(line[5+len(line_aux)]))
 
+            if len(line)>12:
+                line_aux.extend(REAL(line[-12:]))
+
 #            line_test.append(line[len(line)-1])
             x = line_aux[0]
             y = line_aux[1]
             z = line_aux[2]
-            q.append(line_aux[3])
             pos.append([x,y,z])
+
+            if len(line)>12:
+                q.append([line_aux[3],line_aux[4],line_aux[5],line_aux[6],line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]])
+            else:
+                q.append(line_aux[3])
 
 #           for i in range(10):
 #                f.write("%s\t"%line_test[i])
