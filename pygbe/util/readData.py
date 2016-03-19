@@ -105,6 +105,8 @@ def readpqr(filename, REAL):
 
     pos = []
     q   = []
+    p   = []
+    Q   = []
     for line in file(filename):
         line = numpy.array(line.split())
         line_aux = []
@@ -135,7 +137,9 @@ def readpqr(filename, REAL):
             pos.append([x,y,z])
 
             if len(line)>12:
-                q.append([line_aux[3],line_aux[4],line_aux[5],line_aux[6],line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]])
+                q.append(line_aux[3])
+                p.append([line_aux[4],line_aux[5],line_aux[6]])
+                Q.append([line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]])
             else:
                 q.append(line_aux[3])
 
@@ -147,8 +151,11 @@ def readpqr(filename, REAL):
 #    quit()
     pos = numpy.array(pos)
     q   = numpy.array(q)
+    p   = numpy.array(p)
+    Q   = numpy.array(Q)
     Nq  = len(q)
-    return pos, q, Nq
+
+    return pos, q, p, Q, Nq
 
 
 def readcrd(filename, REAL):

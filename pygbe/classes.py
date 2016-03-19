@@ -147,6 +147,8 @@ class fields():
         self.E      = []    # dielectric constant
         self.xq     = []    # position of charges
         self.q      = []    # value of charges
+        self.p      = []    # value of dipole
+        self.Q      = []    # value of Quadrupole
         self.coul   = []    # 1: perform Coulomb interaction calculation
                             # 0: don't do Coulomb calculation
 
@@ -848,10 +850,12 @@ def initializeField(filename, param):
                 xq,q,Nq = readcrd(qfile[i], param.REAL)             # read charges
                 print '\nReading crd for region %i from '%i+qfile[i]
             if qfile[i][-4:]=='.pqr':
-                xq,q,Nq = readpqr(qfile[i], param.REAL)             # read charges
+                xq,q,p,Q,Nq = readpqr(qfile[i], param.REAL)             # read charges
                 print '\nReading pqr for region %i from '%i+qfile[i]
             field_aux.xq = xq                                       # charges positions
             field_aux.q = q                                         # charges values
+            field_aux.p = p                                         # dipole values
+            field_aux.Q = Q                                         # quadrupole values
         if int(Nparent[i])==1:                                      # if it is an enclosed region
             field_aux.parent.append(int(parent[i]))                 # pointer to parent surface (enclosing surface)
         if int(Nchild[i])>0:                                        # if there are enclosed regions inside
