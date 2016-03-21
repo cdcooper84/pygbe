@@ -138,8 +138,8 @@ def readpqr(filename, REAL):
 
             if len(line)>12:
                 q.append(line_aux[3])
-                p.append([line_aux[4],line_aux[5],line_aux[6]])
-                Q.append([line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]])
+                p.append(numpy.array([line_aux[4],line_aux[5],line_aux[6]]))
+                Q.append(numpy.reshape(numpy.array([line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]]),(3,3)))
             else:
                 q.append(line_aux[3])
 

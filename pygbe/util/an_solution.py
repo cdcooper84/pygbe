@@ -395,10 +395,11 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
-    print iterations
+#       print iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
     
-    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+#    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+    E_P = 0.5*cons*sum(q*PHI) 
 
     return E_P
 
@@ -1516,20 +1517,20 @@ print E_inter
 '''
 
 
-"""
-q   = array([0.,])
-p   = array([[1.,0.,0.]])
-Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,-0.]]])
-alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*1.
-xq  = array([[-1e-10,1e-10,1e-10]])
+
+q   = array([1.,])
+p   = array([[0.,0.,0.]])
+Q   = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,-2.]]])
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
+xq  = array([[1.,1.,1.41421356]])
 E_1 = 1.
-E_2 = 78.3
+E_2 = 80.
 E_0 = 8.854187818e-12
-R   = 3.
-N   = 10
+R   = 4.
+N   = 20
 Na  = 6.0221415e23
 a   = R
-kappa = 0.
+kappa = 0.125
 
 energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
 energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
@@ -1537,9 +1538,9 @@ energy_mult = an_multipole(q, p, Q, xq, E_1, E_2, R, N)
 energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-print energy
-print energy_sph
-print energy_mult
+#print energy
+#print energy_sph
+#print energy_mult
 print energy_mult_pol
 #print energy_mult2
 
@@ -1548,4 +1549,4 @@ print energy_mult_pol
 #E_solv_P = 0.5*sum(q*PHI_P)*Na*1e7/JtoCal
 #print 'With spherical harmonics: %f'%E_solv_sph
 #print 'With Legendre functions : %f'%E_solv_P
-"""
+

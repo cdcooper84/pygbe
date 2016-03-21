@@ -219,7 +219,20 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                                     + dy_pq*surf_array[s].normal[:,1] \
                                                                     + dz_pq*surf_array[s].normal[:,2])
                     else:
-                        aux += field_array[j].q[i]/(field_array[j].E*R_pq)
+                        aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
+
+                        if len(field_array[j].p)>0:                        # Dipole component
+                            aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
+                            aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+
+                        if len(field_array[j].Q)>0:                        # Quadrupole component
+                            aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
+                                                [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
+                                                [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
+                            aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+
+                            
+
 
 #               For CHILD surfaces, q contributes to RHS in 
 #               EXTERIOR equation (hence Precond[1,:] and [3,:])
@@ -262,7 +275,17 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                                     + dy_pq*surf_array[s].normal[:,1] \
                                                                     + dz_pq*surf_array[s].normal[:,2])
                     else:
-                        aux += field_array[j].q[i]/(field_array[j].E*R_pq)
+                        aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
+
+                        if len(field_array[j].p)>0:                        # Dipole component
+                            aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
+                            aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+
+                        if len(field_array[j].Q)>0:                        # Quadrupole component
+                            aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
+                                                [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
+                                                [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
+                            aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
 
 #               No preconditioner
 #                F[s_start:s_start+s_size] += aux
