@@ -26,7 +26,7 @@ from math import pi
 from tree.FMMutils import (getMultipole, upwardSweep, M2P_sort,
                            M2PKt_sort, M2P_gpu, M2PKt_gpu, P2P_sort,
                            P2PKt_sort, P2P_gpu, P2PKt_gpu, M2P_nonvec,
-                           P2P_nonvec)
+                           P2P_nonvec, P2P_nonvec_derivative)
 from classes import Event
 try:
     import pycuda.autoinit
@@ -276,7 +276,6 @@ def project_Kt(XKt, LorY, surfSrc, surfTar, Kt_diag,
 
     return Kt_lyr
 
-
 def get_phir (XK, XV, surface, xq, Cells, par_reac, ind_reac):
 
     REAL = par_reac.REAL
@@ -348,6 +347,58 @@ def get_phir (XK, XV, surface, xq, Cells, par_reac, ind_reac):
 #    print '\tTime P2P: %f'%time_P2P
 
     return phi_reac, AI_int
+
+def get_dphirdr (XK, XV, surface, xq, Cells, par_reac, ind_reac):
+
+    REAL = par_reac.REAL
+    N = len(XK)
+    MV = numpy.zeros(len(XK))
+    L = numpy.sqrt(2*surface.Area) # Representative length
+    AI_int = 0
+
+    # Setup vector
+    K = par_reac.K
+    tic = time.time()
+    w  = getWeights(K)
+    X_V = numpy.zeros(N*K)
+    X_Kx = numpy.zeros(N*K)
+    X_Ky = numpy.zeros(N*K)
+    X_Kz = numpy.zeros(N*K)
+    X_Kc = numpy.zeros(N*K)
+    X_Vc = numpy.zeros(N*K)
+
+    for i in range(N*K):
+        X_V[i]   = XV[i/K]*w[i%K]*surface.Area[i/K]
+        X_Kx[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,0]
+        X_Ky[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,1]
+        X_Kz[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,2]
+        X_Kc[i]  = XK[i/K]
+        X_Vc[i]  = XV[i/K]
+    
+    toc = time.time()
+    time_set = toc - tic
+
+    # Evaluation
+    IorE = 0    # This evaluation is on charge points, no self-operator
+    AI_int = 0
+    phi_reac = numpy.zeros(len(xq))
+    time_P2P = 0.
+    time_M2P = 0.
+    for i in range(len(xq)):
+        CJ = 0
+        Kval = 0.
+        Vval = 0.
+        source = []
+        dKval, dVval, AI_int, time_P2P = P2P_nonvec_derivative(Cells, surface, X_V, X_Kx, X_Ky, X_Kz, X_Kc, X_Vc,
+                                        xq[i], Kval, Vval, IorE, par_reac, w, source, AI_int, time_P2P)
+        dphi_reac_dr[i] = (-dKval + dVval)/(4*pi)
+#    print '\tTime set: %f'%time_P2M
+#    print '\tTime P2M: %f'%time_P2M
+#    print '\tTime M2M: %f'%time_M2M
+#    print '\tTime M2P: %f'%time_M2P
+#    print '\tTime P2P: %f'%time_P2P
+
+    return dphi_reac_dr, AI_int
 
 def get_phir_gpu (XK, XV, surface, field, par_reac, kernel):
 
