@@ -872,7 +872,8 @@ def P2P_nonvec_derivative(Cells, surface, m, mx, my, mz, mKc, mVc,
     aux = numpy.zeros(2)
     K_diag = 0
     V_diag = 0
-    direct_c(dK_aux, dV_aux, int(LorY), K_diag, V_diag, int(IorE), numpy.ravel(surface.vertex[surface.triangle[:]]), 
+    direct_c_derivative(dKx_aux, dKy_aux, dKz_aux, dVx_aux, dVy_aux, dVz_aux, int(LorY), 
+            K_diag, V_diag, int(IorE), numpy.ravel(surface.vertex[surface.triangle[:]]), 
             numpy.int32(tri), numpy.int32(k), surface.xi, surface.yi, surface.zi,
             s_xj, s_yj, s_zj, xq_arr, yq_arr, zq_arr, s_m, s_mx, s_my, s_mz, s_mKc, s_mVc, 
             numpy.array([-1], dtype=numpy.int32), surface.Area, surface.sglInt_int, surface.sglInt_ext,
