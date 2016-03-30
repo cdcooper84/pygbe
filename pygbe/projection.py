@@ -381,24 +381,36 @@ def get_dphirdr (XK, XV, surface, xq, Cells, par_reac, ind_reac):
     # Evaluation
     IorE = 0    # This evaluation is on charge points, no self-operator
     AI_int = 0
-    phi_reac = numpy.zeros(len(xq))
+    dphix_reac = numpy.zeros(len(xq))
+    dphiy_reac = numpy.zeros(len(xq))
+    dphiz_reac = numpy.zeros(len(xq))
     time_P2P = 0.
     time_M2P = 0.
     for i in range(len(xq)):
         CJ = 0
-        Kval = 0.
-        Vval = 0.
+        dKxval = 0.
+        dKyval = 0.
+        dKzval = 0.
+        dVxval = 0.
+        dVyval = 0.
+        dVzval = 0.
         source = []
-        dKval, dVval, AI_int, time_P2P = P2P_nonvec_derivative(Cells, surface, X_V, X_Kx, X_Ky, X_Kz, X_Kc, X_Vc,
-                                        xq[i], Kval, Vval, IorE, par_reac, w, source, AI_int, time_P2P)
-        dphi_reac_dr[i] = (-dKval + dVval)/(4*pi)
+        dKxval, dVxval, source, time_M2P = M2P_nonvec(Cells, CJ, xq[i], dKxval, dVxval,
+                                                 ind_reac.index_large, par_reac, source, time_M2P)
+
+        dKxval, dKyval, dKzval, dVxval, \
+        dVyval, dVzval, AI_int, time_P2P = P2P_nonvec_derivative(Cells, surface, X_V, X_Kx, X_Ky, X_Kz, X_Kc, X_Vc,
+                                        xq[i], dKxval, dKyval, dKzval, dVxval, dVyval, dVzval, IorE, par_reac, w, source, AI_int, time_P2P)
+        dphix_reac[i] = (-dKxval + dVxval)/(4*pi)
+        dphiy_reac[i] = (-dKyval + dVyval)/(4*pi)
+        dphiz_reac[i] = (-dKzval + dVzval)/(4*pi)
 #    print '\tTime set: %f'%time_P2M
 #    print '\tTime P2M: %f'%time_P2M
 #    print '\tTime M2M: %f'%time_M2M
 #    print '\tTime M2P: %f'%time_M2P
 #    print '\tTime P2P: %f'%time_P2P
 
-    return dphi_reac_dr, AI_int
+    return dphix_reac, dphiy_reac, dphiz_reac, AI_int
 
 def get_phir_gpu (XK, XV, surface, field, par_reac, kernel):
 

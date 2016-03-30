@@ -286,7 +286,7 @@ def main(log_output=True):
     print 'Solve time        : %fs'%solve_time
     phifname = '{:%Y-%m-%d-%H%M%S}-phi.txt'.format(datetime.now())
     numpy.savetxt(os.path.join(output_dir, phifname),phi)
-    #phi = loadtxt('phi.txt')
+#    phi = numpy.loadtxt('phi.txt')
 
     # Put result phi in corresponding surfaces
     fill_phi(phi, surf_array)

@@ -380,13 +380,13 @@ void GQ_fine_derivative(REAL &dPHI_Kx, REAL &dPHI_Ky, REAL &dPHI_Kz,
 
         if (LorY==1)
         {
-            aux = -Wk[kk]*Area*r3;
+            aux = Wk[kk]*Area*r3;
             dPHI_Vx -= dx*aux;
             dPHI_Vy -= dy*aux;
             dPHI_Vz -= dz*aux;
-            dPHI_Kx += aux*nx-3*aux*(nx*dx+ny*dy+nz*dz)*(r*r);
-            dPHI_Ky += aux*ny-3*aux*(nx*dx+ny*dy+nz*dz)*(r*r);
-            dPHI_Kz += aux*nz-3*aux*(nx*dx+ny*dy+nz*dz)*(r*r);
+            dPHI_Kx += aux*nx-3*aux*dx*(nx*dx+ny*dy+nz*dz)*(r*r);
+            dPHI_Ky += aux*ny-3*aux*dy*(nx*dx+ny*dy+nz*dz)*(r*r);
+            dPHI_Kz += aux*nz-3*aux*dz*(nx*dx+ny*dy+nz*dz)*(r*r);
         }
 
         else    // this else will never fire as this function is only used to calculate energy (always Laplace)
@@ -571,7 +571,7 @@ void direct_c_derivative(REAL *dKx_aux, int dKx_auxSize, REAL *dKy_aux, int dKy_
                 R  = 1/sqrt(dx*dx + dy*dy + dz*dz + eps*eps);
                 R2 = R*R;
                 R3 = R2*R;
-                if (LorY==2)
+                if (LorY==2) // this if never fires as this function is only used for energy calculations (only laplace)
                 {
                     expKr = exp(-kappa*R);
                     dVx_aux[i_aux] += m[j]*expKr*R;

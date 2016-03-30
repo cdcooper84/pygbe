@@ -1517,10 +1517,10 @@ print E_inter
 '''
 
 
-"""
+
 q   = array([1.,])
-p   = array([[0.,0.,0.]])
-Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
+p   = array([[1.,0.,0.]])
+Q   = array([[[0.,0.,0.],[0.,-0.,0.],[0.,0.,0.]]])
 alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
 xq  = array([[1.,1.,1.41421356]])
 #xq  = array([[1e-12,1e-12,1e-12]])
@@ -1550,4 +1550,4 @@ print energy_mult_pol
 #E_solv_P = 0.5*sum(q*PHI_P)*Na*1e7/JtoCal
 #print 'With spherical harmonics: %f'%E_solv_sph
 #print 'With Legendre functions : %f'%E_solv_P
-"""
+

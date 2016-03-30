@@ -27,7 +27,7 @@ from scipy.misc import comb
 
 # Wrapped code
 from multipole import multipole_c, setIndex, getIndex_arr, multipole_sort, multipoleKt_sort
-from direct import direct_c, direct_sort, directKt_sort
+from direct import direct_c, direct_c_derivative, direct_sort, directKt_sort
 from calculateMultipoles import P2M, M2M
 
 # CUDA libraries
@@ -843,7 +843,8 @@ def P2P_nonvec(Cells, surface, m, mx, my, mz, mKc, mVc,
     return Kval, Vval, AI_int, time_P2P
 
 def P2P_nonvec_derivative(Cells, surface, m, mx, my, mz, mKc, mVc,
-                          xq, dKval, dVval, IorE, par_reac, w, source, AI_int, time_P2P):
+                          xq, dKxval, dKyval, dKzval, dVxval, dVyval, dVzval, 
+                          IorE, par_reac, w, source, AI_int, time_P2P):
 
     tic = time.time()
     LorY = 1
@@ -861,8 +862,12 @@ def P2P_nonvec_derivative(Cells, surface, m, mx, my, mz, mKc, mVc,
     tri  = source/par_reac.K # Triangle
     k    = source%par_reac.K # Gauss point
 
-    dK_aux = numpy.zeros(1)
-    dV_aux = numpy.zeros(1)
+    dKx_aux = numpy.zeros(1)
+    dKy_aux = numpy.zeros(1)
+    dKz_aux = numpy.zeros(1)
+    dVx_aux = numpy.zeros(1)
+    dVy_aux = numpy.zeros(1)
+    dVz_aux = numpy.zeros(1)
 
     xq_arr = numpy.array([xq[0]])
     yq_arr = numpy.array([xq[1]])
@@ -882,10 +887,14 @@ def P2P_nonvec_derivative(Cells, surface, m, mx, my, mz, mKc, mVc,
 
     AI_int += int(aux[0])
 
-    dKval += dK_aux
-    dVval += dV_aux
+    dKxval += dKx_aux
+    dKyval += dKy_aux
+    dKzval += dKz_aux
+    dVxval += dVx_aux
+    dVyval += dVy_aux
+    dVzval += dVz_aux
     toc = time.time()
     time_P2P += toc - tic
 
-    return dKval, dVval, AI_int, time_P2P
+    return dKxval, dKyval, dKzval, dVxval, dVyval, dVzval, AI_int, time_P2P
 

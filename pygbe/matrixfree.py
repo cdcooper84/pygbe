@@ -24,7 +24,7 @@ import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
 from tree.direct import coulomb_direct
-from projection import project, project_Kt, get_phir, get_phir_gpu
+from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr
 from classes import parameters, index_constant
 import time
 from util.semi_analytical import GQ_1D
@@ -733,6 +733,9 @@ def calculateEsolv(surf_array, field_array, param, kernel):
             AI_int = 0
             Naux = 0
             phi_reac = numpy.zeros(len(field_array[f].q))
+            dphix_reac = numpy.zeros(len(field_array[f].p))
+            dphiy_reac = numpy.zeros(len(field_array[f].p))
+            dphiz_reac = numpy.zeros(len(field_array[f].p))
 
 #           First look at CHILD surfaces
 #           Need to account for normals pointing outwards
@@ -755,11 +758,17 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                    if len(field_array[f].p)>0:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
                 
                 AI_int += AI
                 phi_reac -= phi_aux # Minus sign to account for normal pointing out
+                if len(field_array[f].p)>0:
+                    dphix_reac -= dphix_aux
+                    dphiy_reac -= dphiy_aux
+                    dphiz_reac -= dphiz_aux
 
 #           Now look at PARENT surface
             if len(field_array[f].parent)>0:
@@ -776,14 +785,27 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                    if len(field_array[f].p)>0:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, s.dphi, s, field_array[f], par_reac, kernel)
                 
                 AI_int += AI
                 phi_reac += phi_aux 
 
+                if len(field_array[f].p)>0:
+                    dphix_reac += dphix_aux
+                    dphiy_reac += dphiy_aux
+                    dphiz_reac += dphiz_aux
+
             
             E_solv_aux += 0.5*C0*numpy.sum(field_array[f].q*phi_reac)
+    
+            if len(field_array[f].p)>0:
+                E_solv_aux += 0.5*C0*numpy.sum(field_array[f].p[:,0]*dphix_reac +\
+                                               field_array[f].p[:,1]*dphiy_reac +\
+                                               field_array[f].p[:,2]*dphiz_reac)
+
             E_solv.append(E_solv_aux)
 
             print '%i of %i analytical integrals for phi_reac calculation in region %i'%(AI_int/len(field_array[f].xq),Naux, f)
