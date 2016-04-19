@@ -26,7 +26,7 @@ from math import pi
 from tree.FMMutils import (getMultipole, upwardSweep, M2P_sort,
                            M2PKt_sort, M2P_gpu, M2PKt_gpu, P2P_sort,
                            P2PKt_sort, P2P_gpu, P2PKt_gpu, M2P_nonvec,
-                           P2P_nonvec, P2P_nonvec_derivative)
+                           P2P_nonvec, P2P_nonvec_derivative, P2P_nonvec_2derivative)
 from classes import Event
 try:
     import pycuda.autoinit
@@ -411,6 +411,103 @@ def get_dphirdr (XK, XV, surface, xq, Cells, par_reac, ind_reac):
 #    print '\tTime P2P: %f'%time_P2P
 
     return dphix_reac, dphiy_reac, dphiz_reac, AI_int
+
+def get_d2phirdr2 (XK, XV, surface, xq, Cells, par_reac, ind_reac):
+
+    REAL = par_reac.REAL
+    N = len(XK)
+    MV = numpy.zeros(len(XK))
+    L = numpy.sqrt(2*surface.Area) # Representative length
+    AI_int = 0
+
+    # Setup vector
+    K = par_reac.K
+    tic = time.time()
+    w  = getWeights(K)
+    X_V = numpy.zeros(N*K)
+    X_Kx = numpy.zeros(N*K)
+    X_Ky = numpy.zeros(N*K)
+    X_Kz = numpy.zeros(N*K)
+    X_Kc = numpy.zeros(N*K)
+    X_Vc = numpy.zeros(N*K)
+
+    for i in range(N*K):
+        X_V[i]   = XV[i/K]*w[i%K]*surface.Area[i/K]
+        X_Kx[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,0]
+        X_Ky[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,1]
+        X_Kz[i]  = XK[i/K]*w[i%K]*surface.Area[i/K]*surface.normal[i/K,2]
+        X_Kc[i]  = XK[i/K]
+        X_Vc[i]  = XV[i/K]
+    
+    toc = time.time()
+    time_set = toc - tic
+
+    # Evaluation
+    IorE = 0    # This evaluation is on charge points, no self-operator
+    AI_int = 0
+    dphix_reac = numpy.zeros(len(xq))
+    dphiy_reac = numpy.zeros(len(xq))
+    dphiz_reac = numpy.zeros(len(xq))
+    dphixx_reac = numpy.zeros(len(xq))
+    dphixy_reac = numpy.zeros(len(xq))
+    dphixz_reac = numpy.zeros(len(xq))
+    dphiyx_reac = numpy.zeros(len(xq))
+    dphiyy_reac = numpy.zeros(len(xq))
+    dphiyz_reac = numpy.zeros(len(xq))
+    dphizx_reac = numpy.zeros(len(xq))
+    dphizy_reac = numpy.zeros(len(xq))
+    dphizz_reac = numpy.zeros(len(xq))
+    time_P2P = 0.
+    time_M2P = 0.
+    for i in range(len(xq)):
+        CJ = 0
+        dKxxval = 0.
+        dKxyval = 0.
+        dKxzval = 0.
+        dKyxval = 0.
+        dKyyval = 0.
+        dKyzval = 0.
+        dKzxval = 0.
+        dKzyval = 0.
+        dKzzval = 0.
+        dVxxval = 0.
+        dVxyval = 0.
+        dVxzval = 0.
+        dVyxval = 0.
+        dVyyval = 0.
+        dVyzval = 0.
+        dVzxval = 0.
+        dVzyval = 0.
+        dVzzval = 0.
+        source = []
+        dKxxval, dVxxval, source, time_M2P = M2P_nonvec(Cells, CJ, xq[i], dKxxval, dVxxval,
+                                                 ind_reac.index_large, par_reac, source, time_M2P)
+
+        dKxxval, dKxyval, dKxzval, dKyxval, dKyyval, dKyzval, dKzxval, dKzyval, dKzzval, \
+        dVxxval, dVxyval, dVxzval, dVyxval, dVyyval, dVyzval, dVzxval, dVzyval, dVzzval, \
+        AI_int, time_P2P = P2P_nonvec_2derivative(Cells, surface, X_V, X_Kx, X_Ky, X_Kz, X_Kc, X_Vc, xq[i], 
+                        dKxxval, dKxyval, dKxzval, dKyxval, dKyyval, dKyzval, dKzxval, dKzyval, dKzzval,
+                        dVxxval, dVxyval, dVxzval, dVyxval, dVyyval, dVyzval, dVzxval, dVzyval, dVzzval,
+                        IorE, par_reac, w, source, AI_int, time_P2P)
+
+        dphixx_reac[i] = (-dKxxval + dVxxval)/(4*pi)
+        dphixy_reac[i] = (-dKxyval + dVxyval)/(4*pi)
+        dphixz_reac[i] = (-dKxzval + dVxzval)/(4*pi)
+        dphiyx_reac[i] = (-dKyxval + dVyxval)/(4*pi)
+        dphiyy_reac[i] = (-dKyyval + dVyyval)/(4*pi)
+        dphiyz_reac[i] = (-dKyzval + dVyzval)/(4*pi)
+        dphizx_reac[i] = (-dKzxval + dVzxval)/(4*pi)
+        dphizy_reac[i] = (-dKzyval + dVzyval)/(4*pi)
+        dphizz_reac[i] = (-dKzzval + dVzzval)/(4*pi)
+#    print '\tTime set: %f'%time_P2M
+#    print '\tTime P2M: %f'%time_P2M
+#    print '\tTime M2M: %f'%time_M2M
+#    print '\tTime M2P: %f'%time_M2P
+#    print '\tTime P2P: %f'%time_P2P
+
+    return dphixx_reac, dphixy_reac, dphixz_reac, \
+            dphiyx_reac, dphiyy_reac, dphiyz_reac, \
+            dphizx_reac, dphizy_reac, dphizz_reac, AI_int
 
 def get_phir_gpu (XK, XV, surface, field, par_reac, kernel):
 

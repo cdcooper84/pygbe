@@ -27,7 +27,7 @@ from scipy.misc import comb
 
 # Wrapped code
 from multipole import multipole_c, setIndex, getIndex_arr, multipole_sort, multipoleKt_sort
-from direct import direct_c, direct_c_derivative, direct_sort, directKt_sort
+from direct import direct_c, direct_c_derivative, direct_c_2derivative, direct_sort, directKt_sort
 from calculateMultipoles import P2M, M2M
 
 # CUDA libraries
@@ -897,4 +897,87 @@ def P2P_nonvec_derivative(Cells, surface, m, mx, my, mz, mKc, mVc,
     time_P2P += toc - tic
 
     return dKxval, dKyval, dKzval, dVxval, dVyval, dVzval, AI_int, time_P2P
+
+
+def P2P_nonvec_2derivative(Cells, surface, m, mx, my, mz, mKc, mVc, xq, 
+            dKxxval, dKxyval, dKxzval, dKyxval, dKyyval, dKyzval, dKzxval, dKzyval, dKzzval, 
+            dVxxval, dVxyval, dVxzval, dVyxval, dVyyval, dVyzval, dVzxval, dVzyval, dVzzval, 
+            IorE, par_reac, w, source, AI_int, time_P2P):
+
+    tic = time.time()
+    LorY = 1
+    source = numpy.int32(numpy.array(source))
+    s_xj  = surface.xj[source]
+    s_yj  = surface.yj[source]
+    s_zj  = surface.zj[source]
+    s_m   = m[source]
+    s_mx  = mx[source]
+    s_my  = my[source]
+    s_mz  = mz[source]
+    s_mKc = mKc[source]
+    s_mVc = mVc[source]
+
+    tri  = source/par_reac.K # Triangle
+    k    = source%par_reac.K # Gauss point
+
+    dKxx_aux = numpy.zeros(1)
+    dKxy_aux = numpy.zeros(1)
+    dKxz_aux = numpy.zeros(1)
+    dKyx_aux = numpy.zeros(1)
+    dKyy_aux = numpy.zeros(1)
+    dKyz_aux = numpy.zeros(1)
+    dKzx_aux = numpy.zeros(1)
+    dKzy_aux = numpy.zeros(1)
+    dKzz_aux = numpy.zeros(1)
+    dVxx_aux = numpy.zeros(1)
+    dVxy_aux = numpy.zeros(1)
+    dVxz_aux = numpy.zeros(1)
+    dVyx_aux = numpy.zeros(1)
+    dVyy_aux = numpy.zeros(1)
+    dVyz_aux = numpy.zeros(1)
+    dVzx_aux = numpy.zeros(1)
+    dVzy_aux = numpy.zeros(1)
+    dVzz_aux = numpy.zeros(1)
+
+    xq_arr = numpy.array([xq[0]])
+    yq_arr = numpy.array([xq[1]])
+    zq_arr = numpy.array([xq[2]])
+    target = numpy.array([-1], dtype=numpy.int32)
+
+    aux = numpy.zeros(2)
+    K_diag = 0
+    V_diag = 0
+    direct_c_2derivative(dKxx_aux, dKxy_aux, dKxz_aux, dKyx_aux, dKyy_aux, dKyz_aux, dKzx_aux, dKzy_aux, dKzz_aux, 
+                dVxx_aux, dVxy_aux, dVxz_aux, dVyx_aux, dVyy_aux, dVyz_aux, dVzx_aux, dVzy_aux, dVzz_aux,
+            int(LorY), K_diag, V_diag, int(IorE), numpy.ravel(surface.vertex[surface.triangle[:]]), 
+            numpy.int32(tri), numpy.int32(k), surface.xi, surface.yi, surface.zi,
+            s_xj, s_yj, s_zj, xq_arr, yq_arr, zq_arr, s_m, s_mx, s_my, s_mz, s_mKc, s_mVc, 
+            numpy.array([-1], dtype=numpy.int32), surface.Area, surface.sglInt_int, surface.sglInt_ext,
+            surface.xk, surface.wk, surface.Xsk, surface.Wsk,
+            par_reac.kappa, par_reac.threshold, par_reac.eps, w[0], aux)
+
+    AI_int += int(aux[0])
+
+    dKxxval += dKxx_aux
+    dKxyval += dKxy_aux
+    dKxzval += dKxz_aux
+    dKyxval += dKyx_aux
+    dKyyval += dKyy_aux
+    dKyzval += dKyz_aux
+    dKzxval += dKzx_aux
+    dKzyval += dKzy_aux
+    dKzzval += dKzz_aux
+    dVxxval += dVxx_aux
+    dVxyval += dVxy_aux
+    dVxzval += dVxz_aux
+    dVyxval += dVyx_aux
+    dVyyval += dVyy_aux
+    dVyzval += dVyz_aux
+    dVzxval += dVzx_aux
+    dVzyval += dVzy_aux
+    dVzzval += dVzz_aux
+    toc = time.time()
+    time_P2P += toc - tic
+
+    return dKxxval, dKxyval, dKxzval, dKyxval, dKyyval, dKyzval, dKzxval, dKzyval, dKzzval, dVxxval, dVxyval, dVxzval, dVyxval, dVyyval, dVyzval, dVzxval, dVzyval, dVzzval, AI_int, time_P2P
 

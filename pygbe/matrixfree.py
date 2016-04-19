@@ -24,7 +24,7 @@ import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
 from tree.direct import coulomb_direct
-from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr
+from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_d2phirdr2
 from classes import parameters, index_constant
 import time
 from util.semi_analytical import GQ_1D
@@ -736,6 +736,15 @@ def calculateEsolv(surf_array, field_array, param, kernel):
             dphix_reac = numpy.zeros(len(field_array[f].p))
             dphiy_reac = numpy.zeros(len(field_array[f].p))
             dphiz_reac = numpy.zeros(len(field_array[f].p))
+            dphixx_reac = numpy.zeros(len(field_array[f].Q))
+            dphixy_reac = numpy.zeros(len(field_array[f].Q))
+            dphixz_reac = numpy.zeros(len(field_array[f].Q))
+            dphiyx_reac = numpy.zeros(len(field_array[f].Q))
+            dphiyy_reac = numpy.zeros(len(field_array[f].Q))
+            dphiyz_reac = numpy.zeros(len(field_array[f].Q))
+            dphizx_reac = numpy.zeros(len(field_array[f].Q))
+            dphizy_reac = numpy.zeros(len(field_array[f].Q))
+            dphizz_reac = numpy.zeros(len(field_array[f].Q))
 
 #           First look at CHILD surfaces
 #           Need to account for normals pointing outwards
@@ -760,6 +769,11 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                     phi_aux, AI = get_phir(s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                     if len(field_array[f].p)>0:
                         dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                    if len(field_array[f].Q)>0:
+                        dphixx_aux, dphixy_aux, dphixz_aux, \
+                        dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                        dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                        
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
                 
@@ -769,6 +783,17 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                     dphix_reac -= dphix_aux
                     dphiy_reac -= dphiy_aux
                     dphiz_reac -= dphiz_aux
+
+                if len(field_array[f].Q)>0:
+                    dphixx_reac -= dphixx_aux
+                    dphixy_reac -= dphixy_aux
+                    dphixz_reac -= dphixz_aux
+                    dphiyx_reac -= dphiyx_aux
+                    dphiyy_reac -= dphiyy_aux
+                    dphiyz_reac -= dphiyz_aux
+                    dphizx_reac -= dphizx_aux
+                    dphizy_reac -= dphizy_aux
+                    dphizz_reac -= dphizz_aux
 
 #           Now look at PARENT surface
             if len(field_array[f].parent)>0:
@@ -787,6 +812,11 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                     phi_aux, AI = get_phir(s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                     if len(field_array[f].p)>0:
                         dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                    if len(field_array[f].Q)>0:
+                        dphixx_aux, dphixy_aux, dphixz_aux, \
+                        dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                        dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                        
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, s.dphi, s, field_array[f], par_reac, kernel)
                 
@@ -797,14 +827,34 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                     dphix_reac += dphix_aux
                     dphiy_reac += dphiy_aux
                     dphiz_reac += dphiz_aux
+                if len(field_array[f].Q)>0:
+                    dphixx_reac += dphixx_aux
+                    dphixy_reac += dphixy_aux
+                    dphixz_reac += dphixz_aux
+                    dphiyx_reac += dphiyx_aux
+                    dphiyy_reac += dphiyy_aux
+                    dphiyz_reac += dphiyz_aux
+                    dphizx_reac += dphizx_aux
+                    dphizy_reac += dphizy_aux
+                    dphizz_reac += dphizz_aux
 
-            
             E_solv_aux += 0.5*C0*numpy.sum(field_array[f].q*phi_reac)
     
             if len(field_array[f].p)>0:
                 E_solv_aux += 0.5*C0*numpy.sum(field_array[f].p[:,0]*dphix_reac +\
                                                field_array[f].p[:,1]*dphiy_reac +\
                                                field_array[f].p[:,2]*dphiz_reac)
+
+            if len(field_array[f].Q)>0:
+                E_solv_aux += 0.5*C0*(1/6.)*numpy.sum(field_array[f].Q[:,0,0]*dphixx_reac +\
+                                               field_array[f].Q[:,0,1]*dphixy_reac +\
+                                               field_array[f].Q[:,0,2]*dphixz_reac +\
+                                               field_array[f].Q[:,1,0]*dphiyx_reac +\
+                                               field_array[f].Q[:,1,1]*dphiyy_reac +\
+                                               field_array[f].Q[:,1,2]*dphiyz_reac +\
+                                               field_array[f].Q[:,2,0]*dphizx_reac +\
+                                               field_array[f].Q[:,2,1]*dphizy_reac +\
+                                               field_array[f].Q[:,2,2]*dphizz_reac)
 
             E_solv.append(E_solv_aux)
 

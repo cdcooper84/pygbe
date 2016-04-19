@@ -46,6 +46,21 @@ extern void direct_c_derivative(double *dKx_aux, int dKx_auxSize, double *dKy_au
 
 extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                             double *m, int mSize, double *K_aux, int K_auxSize);
+
+extern void direct_c_2derivative(double *dKxx_aux, int dKxx_auxSize, double *dKxy_aux, int dKxy_auxSize, double *dKxz_aux, int dKxz_auxSize,
+                          double *dKyx_aux, int dKyx_auxSize, double *dKyy_aux, int dKyy_auxSize, double *dKyz_aux, int dKyz_auxSize,
+                          double *dKzx_aux, int dKzx_auxSize, double *dKzy_aux, int dKzy_auxSize, double *dKzz_aux, int dKzz_auxSize,
+                          double *dVxx_aux, int dVxx_auxSize, double *dVxy_aux, int dVxy_auxSize, double *dVxz_aux, int dVxz_auxSize,
+                          double *dVyx_aux, int dVyx_auxSize, double *dVyy_aux, int dVyy_auxSize, double *dVyz_aux, int dVyz_auxSize,
+                          double *dVzx_aux, int dVzx_auxSize, double *dVzy_aux, int dVzy_auxSize, double *dVzz_aux, int dVzz_auxSize,
+                        int LorY, double K_diag, double V_diag, int IorE, double *triangle, int triangleSize,
+                        int *tri, int triSize, int *k, int kSize, double *xi, int xiSize, double *yi, int yiSize, 
+                        double *zi, int ziSize, double *s_xj, int s_xjSize, double *s_yj, int s_yjSize, 
+                        double *s_zj, int s_zjSize, double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize,
+                        double *m, int mSize, double *mx, int mxSize, double *my, int mySize, double *mz, int mzSize, double *mKc, int mKcSize, double *mVc, int mVcSize,
+                        int *targets, int targetsSize,double *Area, int AreaSize, double *sglInt_int, int sglInt_intSize, double *sglInt_ext, int sglInt_extSize, 
+                        double *xk, int xkSize, double *wk, int wkSize, double *Xsk, int XskSize, double *Wsk, int WskSize, 
+                        double kappa, double threshold, double eps, double w0, double *aux, int auxSize);
 %}
 
 %include "numpy.i"
@@ -57,6 +72,15 @@ import_array();
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dKx_aux, int dKx_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dKy_aux, int dKy_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dKz_aux, int dKz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKxx_aux, int dKxx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKxy_aux, int dKxy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKxz_aux, int dKxz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKyx_aux, int dKyx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKyy_aux, int dKyy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKyz_aux, int dKyz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKzx_aux, int dKzx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKzy_aux, int dKzy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dKzz_aux, int dKzz_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *Ktx_aux, int Ktx_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *Kty_aux, int Kty_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *Ktz_aux, int Ktz_auxSize)};
@@ -64,6 +88,15 @@ import_array();
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dVx_aux, int dVx_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dVy_aux, int dVy_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *dVz_aux, int dVz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVxx_aux, int dVxx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVxy_aux, int dVxy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVxz_aux, int dVxz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVyx_aux, int dVyx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVyy_aux, int dVyy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVyz_aux, int dVyz_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVzx_aux, int dVzx_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVzy_aux, int dVzy_auxSize)};
+%apply (double* INPLACE_ARRAY1, int DIM1){(double *dVzz_aux, int dVzz_auxSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *KL, int KLSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *VL, int VLSize)};
 %apply (double* INPLACE_ARRAY1, int DIM1){(double *KY, int KYSize)};
@@ -143,6 +176,21 @@ extern void direct_c_derivative(double *dKx_aux, int dKx_auxSize, double *dKy_au
         double *xk, int xkSize, double *wk, int wkSize, double *Xsk, int XskSize, double *Wsk, int WskSize, 
         double kappa, double threshold, double eps, double w0, double *aux, int auxSize);
 
+extern void direct_c_2derivative(double *dKxx_aux, int dKxx_auxSize, double *dKxy_aux, int dKxy_auxSize, double *dKxz_aux, int dKxz_auxSize,
+                          double *dKyx_aux, int dKyx_auxSize, double *dKyy_aux, int dKyy_auxSize, double *dKyz_aux, int dKyz_auxSize,
+                          double *dKzx_aux, int dKzx_auxSize, double *dKzy_aux, int dKzy_auxSize, double *dKzz_aux, int dKzz_auxSize,
+                          double *dVxx_aux, int dVxx_auxSize, double *dVxy_aux, int dVxy_auxSize, double *dVxz_aux, int dVxz_auxSize,
+                          double *dVyx_aux, int dVyx_auxSize, double *dVyy_aux, int dVyy_auxSize, double *dVyz_aux, int dVyz_auxSize,
+                          double *dVzx_aux, int dVzx_auxSize, double *dVzy_aux, int dVzy_auxSize, double *dVzz_aux, int dVzz_auxSize,
+                        int LorY, double K_diag, double V_diag, int IorE, double *triangle, int triangleSize,
+                        int *tri, int triSize, int *k, int kSize, double *xi, int xiSize, double *yi, int yiSize, 
+                        double *zi, int ziSize, double *s_xj, int s_xjSize, double *s_yj, int s_yjSize, 
+                        double *s_zj, int s_zjSize, double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize,
+                        double *m, int mSize, double *mx, int mxSize, double *my, int mySize, double *mz, int mzSize, double *mKc, int mKcSize, double *mVc, int mVcSize,
+                        int *targets, int targetsSize,double *Area, int AreaSize, double *sglInt_int, int sglInt_intSize, double *sglInt_ext, int sglInt_extSize, 
+                        double *xk, int xkSize, double *wk, int wkSize, double *Xsk, int XskSize, double *Wsk, int WskSize, 
+                        double kappa, double threshold, double eps, double w0, double *aux, int auxSize);
+
 extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                             double *m, int mSize, double *K_aux, int K_auxSize);
 
@@ -150,6 +198,15 @@ extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, doubl
 %clear (double *dKx_aux, int dKx_auxSize); 
 %clear (double *dKy_aux, int dKy_auxSize); 
 %clear (double *dKz_aux, int dKz_auxSize); 
+%clear (double *dKxx_aux, int dKxx_auxSize); 
+%clear (double *dKxy_aux, int dKxy_auxSize); 
+%clear (double *dKxz_aux, int dKxz_auxSize); 
+%clear (double *dKyx_aux, int dKyx_auxSize); 
+%clear (double *dKyy_aux, int dKyy_auxSize); 
+%clear (double *dKyz_aux, int dKyz_auxSize); 
+%clear (double *dKzx_aux, int dKzx_auxSize); 
+%clear (double *dKzy_aux, int dKzy_auxSize); 
+%clear (double *dKzz_aux, int dKzz_auxSize); 
 %clear (double *Ktx_aux, int Ktx_auxSize); 
 %clear (double *Kty_aux, int Kty_auxSize); 
 %clear (double *Ktz_aux, int Ktz_auxSize); 
@@ -157,6 +214,15 @@ extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, doubl
 %clear (double *dVx_aux, int dVx_auxSize); 
 %clear (double *dVy_aux, int dVy_auxSize); 
 %clear (double *dVz_aux, int dVz_auxSize); 
+%clear (double *dVxx_aux, int dVxx_auxSize); 
+%clear (double *dVxy_aux, int dVxy_auxSize); 
+%clear (double *dVxz_aux, int dVxz_auxSize); 
+%clear (double *dVyx_aux, int dVyx_auxSize); 
+%clear (double *dVyy_aux, int dVyy_auxSize); 
+%clear (double *dVyz_aux, int dVyz_auxSize); 
+%clear (double *dVzx_aux, int dVzx_auxSize); 
+%clear (double *dVzy_aux, int dVzy_auxSize); 
+%clear (double *dVzz_aux, int dVzz_auxSize); 
 %clear (double *KL, int KLSize); 
 %clear (double *VL, int VLSize); 
 %clear (double *KY, int KYSize); 
@@ -182,9 +248,9 @@ extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, doubl
 %clear (double *m, int mSize); 
 %clear (double *mx, int mxSize); 
 %clear (double *my, int mySize); 
-%clear (double *mz, int mzSize); 
-%clear (double *mKc, int mKcSize); 
-%clear (double *mVc, int mVcSize); 
+%clear (double *mz, int mzSize);
+%clear (double *mKc, int mKcSize);
+%clear (double *mVc, int mVcSize);
 %clear (int *targets, int targetsSize); 
 %clear (double *Area, int AreaSize); 
 %clear (double *sglInt_int, int sglInt_intSize); 
