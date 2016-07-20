@@ -15,7 +15,7 @@ def get_mesh_filename(srf_file, mesh_folder):
                 if len(line)>1:
                     mesh_type = numpy.append(mesh_type, 'internal_cavity')
                 elif len(line)==1:
-                    if mesh_type>0:
+                    if len(mesh_type)>0:
                         mesh_type = numpy.append(mesh_type, 'dielectric_interface')
                     elif len(mesh_type)==0:
                         mesh_type = numpy.append(mesh_type, 'stern_layer')
@@ -48,15 +48,13 @@ def write_config_file(config_filename, mesh_files, mesh_type, pqr_file):
 #   Write FIELD lines
     Ncav = len(numpy.where(mesh_type=='internal_cavity')[0])
 #   Outside fields
-    done_cavity = 0
     for i in range(len(mesh_files)):
         if mesh_type[i]=='stern_layer':
             LorY = '2'; E='0'; dielec='80'; kappa='0.125'; charges='0'; coulomb='0'; charge_file='NA'; Nparent='0'; parent='NA'; Nchild='1'; children=str(i)
         elif mesh_type[i]=='dielectric_interface':
             LorY = '1'; E='0'; dielec='80'; kappa='1e-12'; charges='0'; coulomb='0'; charge_file='NA'; Nparent='1'; parent=str(i-1); Nchild='1'; children=str(i)
-        elif mesh_type[i]=='internal_cavity' and done_cavity==0:
+        elif mesh_type[i]=='internal_cavity':
             LorY = '1'; E='1'; dielec='4'; kappa='1e-12'; charges='1'; coulomb='1'; charge_file=pqr_file; Nparent='1'; parent=str(i-1); Nchild=str(Ncav); children=str(numpy.arange(i,i+Ncav, dtype=int))[1:-1]
-            done_cavity = 1
         else:
             break
     
@@ -67,10 +65,15 @@ def write_config_file(config_filename, mesh_files, mesh_type, pqr_file):
 #   Fields inside cavities 
     Nsurf = len(mesh_type)
     i_cav = numpy.where(mesh_type=='internal_cavity')[0]
-    for i in i_cav:
-        LorY = '1'; E='0'; dielec='80'; kappa='1e-12'; charges='0'; coulomb='0'; charge_file='NA'; Nparent='1'; parent=str(i); Nchild='0'; children='NA'
+    if len(i_cav)==0:
+        LorY = '1'; E='1'; dielec='4'; kappa='1e-12'; charges='1'; coulomb='1'; charge_file=pqr_file; Nparent='1'; parent='1'; Nchild='0'; children='NA'
         line_string = 'FIELD\t'+LorY+'\t'+E+'\t'+dielec+'\t'+kappa+'\t'+charges+'\t'+coulomb+'\t'+charge_file+'\t'+Nparent+'\t'+parent+'\t'+Nchild+'\t'+children+'\n'
         f.write(line_string)
+    else:
+        for i in i_cav:
+            LorY = '1'; E='0'; dielec='80'; kappa='1e-12'; charges='0'; coulomb='0'; charge_file='NA'; Nparent='1'; parent=str(i); Nchild='0'; children='NA'
+            line_string = 'FIELD\t'+LorY+'\t'+E+'\t'+dielec+'\t'+kappa+'\t'+charges+'\t'+coulomb+'\t'+charge_file+'\t'+Nparent+'\t'+parent+'\t'+Nchild+'\t'+children+'\n'
+            f.write(line_string)
 
     f.close()
 
@@ -118,7 +121,6 @@ for pqr_file in pqr_files_array:
 
     write_config_file(config_filename, mesh_files, mesh_type, pqr_file)
 
-"""
 # Run cases
 print 'ASYMMETRIC RUNS'
 Esolv_asym = numpy.zeros(len(config_filename_array)) 
@@ -147,7 +149,7 @@ for i, config_filename in enumerate(config_filename_array):
     i1 = pqr_file.find('.')
     i2 = srf_file.find('.')
 
-    print srf_file[i2-6:i2]+'\t'+pqr_file[i1-3:i1]+'\t'+Esolv_asym[i]
+    print srf_file[i2-6:i2]+'\t'+pqr_file[i1-3:i1]+'\t'+str(Esolv_asym[i])
 
 print 'SYMMETRIC RUNS'
 Esolv_sym = numpy.zeros(len(config_filename_array)) 
@@ -176,5 +178,4 @@ for i, config_filename in enumerate(config_filename_array):
     i1 = pqr_file.find('.')
     i2 = srf_file.find('.')
 
-    print srf_file[i2-6:i2]+'\t'+pqr_file[i1-3:i1]+'\t'+Esolv_sym[i]
-"""
+    print srf_file[i2-6:i2]+'\t'+pqr_file[i1-3:i1]+'\t'+str(Esolv_sym[i])

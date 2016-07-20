@@ -160,16 +160,20 @@ tic = time.time()
 ### Solve
 print 'Solve'
 if args.asymmetric == True:
-    Npicard = 10
+    Npicard = 20 
+    tol_picard = 1e-4
 else:
     Npicard = 1
 
-alpha = 0.5
-beta = -60
-gamma = -0.5
+alpha = 0.320464
+beta = -46.951476
+gamma = -1.182070
 mu = -alpha*tanh(-gamma)
 phi = zeros(param.Neq)
-for picardIter in range(Npicard):
+
+picardIter = 0
+phi_L2error = 1.
+while phi_L2error>tol_picard and picardIter<Npicard:
 
     if args.asymmetric == True and args.chargeForm == False:
         print '\nPicard iteration %i'%picardIter
@@ -213,6 +217,7 @@ for picardIter in range(Npicard):
 
                 if sum(abs(RHS_sigma))>1e-12:
                     timing.AI_int = 0
+		    print 'Solve for sigma...'
                     sigma = gmres_sigma(s, ss, sigma, RHS_sigma, param, ind0, timing, kernel)
                 for ff in field_array:
                     if len(ff.parent)>0:
@@ -236,11 +241,17 @@ for picardIter in range(Npicard):
             computePrecond(s)
 
 
+    print 'Solve for phi...'
+    phi_old = phi.copy()    
     phi = gmres_solver(surf_array, field_array, phi, F, param, ind0, timing, kernel) 
+    
+    phi_L2error = sqrt(sum((phi_old-phi)**2)/sum(phi**2))
 
 #   Put result phi in corresponding surfaces
     fill_phi(phi, surf_array)
     timing.AI_int = 0
+
+    picardIter += 1
 
 toc = time.time()
 solve_time = toc-tic
