@@ -114,6 +114,8 @@ def readpqr(filename, REAL):
 #        line_test = list(line[0:5])
    
         if line[0]=='ATOM':
+	    if len(line)>10:
+		line = delete(line,4)
 
             for l in range(len(line)-6):
                 aux = line[5+len(line_aux)]

@@ -134,9 +134,13 @@ for i, config_filename in enumerate(config_filename_array):
     output_file = 'output_asym_'+srf_file[i2-6:i2]+'_'+pqr_file[i1-3:i1]
     command = './main_asymmetric.py '+param_file+' '+config_filename+' --asymmetric --chargeForm >'+output_file
 
-    print 'Running '+config_filename+', saved on '+output_file+'...'
-
-    os.system(command)
+    # Check if file existas and if it contains anything (may be the file where previous run stopped)
+    if os.path.isfile(output_file) and os.stat(output_file).st_size>2:
+	print 'Run already done for '+pqr_file
+    else:
+        print 'Running '+config_filename+', saved on '+output_file+'...'
+        os.system(command)
+    
     N,iterations,Esolv_asym[i],Esurf,Ecoul,Time = scanOutput(output_file)
 
 print 'Summary'

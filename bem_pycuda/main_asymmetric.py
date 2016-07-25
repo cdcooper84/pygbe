@@ -161,15 +161,22 @@ tic = time.time()
 print 'Solve'
 if args.asymmetric == True:
     Npicard = 20 
-    tol_picard = 1e-4
 else:
     Npicard = 1
 
-alpha = 0.320464
-beta = -46.951476
-gamma = -1.182070
+tol_picard = 1e-4
+
+alpha = 0.5#0.320464
+beta = -60.#-46.951476
+gamma = -0.5#-1.182070
 mu = -alpha*tanh(-gamma)
 phi = zeros(param.Neq)
+
+# Asymmetric summary
+if args.asymmetric == True:
+    print 'Asymmetric parameters:'
+    print 'alpha: %f, beta: %f, gamma: %f'%(alpha, beta, gamma)
+    print 'Picard: \n\tmax iter: %i\ntolerance: %f'%(Npicard, tol_picard)
 
 picardIter = 0
 phi_L2error = 1.
@@ -252,6 +259,11 @@ while phi_L2error>tol_picard and picardIter<Npicard:
     timing.AI_int = 0
 
     picardIter += 1
+
+if picardIter<Npicard:
+    print 'Reached Picard tolerance of %1.4f'
+    print 'Error: '+str(phi_L2error)
+    
 
 toc = time.time()
 solve_time = toc-tic
