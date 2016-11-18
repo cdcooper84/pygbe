@@ -114,9 +114,9 @@ def Ynmst_theta_derivative(m, n, azim, zenit, Ynm_st):
     Ynmm1_st = conj(special.sph_harm(m-1,n,azim,zenit))
 
     index = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
-    dYnmst_dtheta = zeros(len(xq), dtype=complex)
+    dYnmst_dtheta = zeros(len(azim), dtype=complex)
     if m==0 and n==0:
-        dYnmst_dtheta = zeros(len(xq), dtype=complex)
+        dYnmst_dtheta = zeros(len(azim), dtype=complex)
     elif m+1<n:
         dYnmst_dtheta[index] =  sqrt((n-m)*(n+m+1))*exp(1j*azim[index])*Ynmp1_st[index] \
                             + m/tan(zenit[index])*Ynm_st[index]
@@ -311,8 +311,8 @@ def computeMultipoleMoment(m, n, q, p, Q, xq):
                + sum(Q[:,2,0]*grad_gradCartesian[:,2,0]) \
                + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
-
-    return monopole + dipole + quadrupole
+    
+    return monopole + dipole + quadrupole/6 # divided by 6: see modified Kirkwood Part 2b
 
 def computeYnm_derivatives(m,n,xq_k):
 
@@ -336,7 +336,7 @@ def computeYnm_derivatives(m,n,xq_k):
     return rho**n*Ynm, gradPhi_cart, grad_gradPhi_cart
 
 
-def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
+def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
         
     qe = 1.60217646e-19
     Na = 6.0221415e23
@@ -380,11 +380,16 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N):
 
 
                     rhoYnm, gradPhi, grad_gradPhi = computeYnm_derivatives(m, n, xq[K])
+#                    if n==(N-1):
+#                        print n,m
+#                        print grad_gradPhi
                     
                     C3 = 4*pi/(2*n+1)
                     phi += Bnm * rhoYnm * C3
                     dphi += Bnm * gradPhi * C3
                     ddphi += Bnm * grad_gradPhi[0] * C3
+#                    print n,m,phi,dphi
+#                    print ddphi
             
             PHI[K]   = real(phi)
             DPHI[K]  = real(dphi)
@@ -1517,13 +1522,14 @@ print E_inter
 '''
 
 
+"""
 
-q   = array([1.,])
+q   = array([0.,])
 p   = array([[0.,0.,0.]])
 Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
 alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
-xq  = array([[1.,1.,1.41421356]])
-#xq  = array([[1e-12,1e-12,1e-12]])
+#xq  = array([[1.,1.,1.41421356]])
+xq  = array([[1e-12,1e-12,1e-12]])
 E_1 = 4.
 E_2 = 80.
 E_0 = 8.854187818e-12
@@ -1536,13 +1542,14 @@ kappa = 0.125
 energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
 energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
 energy_mult = an_multipole(q, p, Q, xq, E_1, E_2, R, N)
-energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, R, N)
+energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
+"""
 
 #print energy
 #print energy_sph
 #print energy_mult
-print energy_mult_pol
+#print energy_mult_pol
 #print energy_mult2
 
 #JtoCal = 4.184    

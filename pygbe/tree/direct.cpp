@@ -462,7 +462,7 @@ void GQ_fine_2derivative(REAL &dPHI_Kxx, REAL &dPHI_Kxy, REAL &dPHI_Kxz, REAL &d
             dPHI_Kyz += -3*aux*r2*(dy*nz + dz*ny - 5*r2*dy*dz*(dx*nx+dy*ny+dz*nz)); 
             dPHI_Kzx += -3*aux*r2*(dz*nx + dx*nz - 5*r2*dz*dx*(dx*nx+dy*ny+dz*nz)); 
             dPHI_Kzy += -3*aux*r2*(dz*ny + dy*nz - 5*r2*dz*dy*(dx*nx+dy*ny+dz*nz)); 
-            dPHI_Kzz += -3*aux*r2*(3*dz*nz + dy*ny + dz*nz - 5*r2*dz*dz*(dx*nx+dy*ny+dz*nz)); 
+            dPHI_Kzz += -3*aux*r2*(3*dz*nz + dy*ny + dx*nx - 5*r2*dz*dz*(dx*nx+dy*ny+dz*nz)); 
         }
 
         else    // this else will never fire as this function is only used to calculate energy (always Laplace)
@@ -813,8 +813,8 @@ void direct_c_2derivative(REAL *dKxx_aux, int dKxx_auxSize, REAL *dKxy_aux, int 
                 }
                 else
                 {
-                    GQ_fine_2derivative(dPHI_Kxx, dPHI_Kxy, dPHI_Kxz, dPHI_Kxy, dPHI_Kyy, dPHI_Kyz,dPHI_Kzx, dPHI_Kzy, dPHI_Kzz,
-                                       dPHI_Vxx, dPHI_Vxy, dPHI_Vxz, dPHI_Vxy, dPHI_Vyy, dPHI_Vyz,dPHI_Vzx, dPHI_Vzy, dPHI_Vzz, 
+                    GQ_fine_2derivative(dPHI_Kxx, dPHI_Kxy, dPHI_Kxz, dPHI_Kyx, dPHI_Kyy, dPHI_Kyz,dPHI_Kzx, dPHI_Kzy, dPHI_Kzz,
+                                       dPHI_Vxx, dPHI_Vxy, dPHI_Vxz, dPHI_Vyx, dPHI_Vyy, dPHI_Vyz,dPHI_Vzx, dPHI_Vzy, dPHI_Vzz, 
                                        panel, xt[i_aux], yt[i_aux], zt[i_aux], kappa, Xsk, Wsk, WskSize, Area[tri[j]], LorY); 
                 }
 
