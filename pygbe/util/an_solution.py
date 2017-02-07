@@ -499,6 +499,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
     Returns:
     -------
         p_pol: array size (Nx3) with polarizable component of dipoles
+        Efield: array size (Nx3) with electrostatic field that polarized the multipoles 
     """
     p_pol      = zeros((len(xq),3))
     dipole_diff= 1. 
@@ -517,7 +518,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
-    return p_pol
+    return p_pol, Efield
 
 def coulomb_energy(q, p, Q, xq, E):
     """
@@ -549,28 +550,84 @@ def coulomb_energy(q, p, Q, xq, E):
 
     return E_coul 
 
-def polarization_energy(q, p, Q, xq, E):
+def polarization_energy(p_pol_diss, p_pol_vac, Epol_diss, Epol_vac):
     """
-    Computes the polarization energy 
-    to a point monopole, dipole, and quadrupole distribution at the 
-    position of the multipoles. See equation 29 and 43 of amoeba bem document. 
+    Computes the polarization energy according to Eq 63 in kirkwood multipole
 
     Inputs:
     ------- 
-        q: array size N with charges
-        p: array size (Nx3) with dipoles
-        Q: array size (Nx3x3) with quadrupoles
-        xq: array size (Nx3) with positions of multipoles
-        E: dielectric constant
+        p_pol_diss: array size (Nx3) with polarized component of dipole in 
+                    dissolved state
+        Epol_diss: array size (Nx3) with total field that polarizes the multipoles in 
+                    dissolved state
+        p_pol_vac : array size (Nx3) with polarized component of dipole in 
+                    vacuum state 
+        Epol_vac : array size (Nx3) with total field that polarizes the multipoles in 
+                    vacuum state
     Returns:
     -------
-        ddphi: second derivative of electrostatic potential at the 
-                position of the multipoles
+        polarization_energy: the energy to polarize multipoles from p_pol_vac to p_pol_diss 
+    """
+    qe = 1.60217646e-19
+    Na = 6.0221415e23
+    E_0 = 8.854187818e-12
+    cal2J = 4.184 
+    cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
+
+    polarization_energy = 0.5*cons*sum(sum(p_pol_diss*Epol_diss, axis=1) - sum(p_pol_vac*Epol_vac, axis=1))
+
+    return polarization_energy
+
+def solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
+    """
+    Computes the total free energy required for the solvation of a spherical cavity
+    with a random distribution of point multipoles with a polarizable dipole.
+    See Equation 54 of kirkwood_multipole and Equation 36 of amoeba_bem.
+    The energy has four components: solvent, coulomb in dissolved state, coulomb
+    in vacuum and polarization energy.
+    This function calls: 
+            - an_multipole_polarizable for the solvent contribution.
+            - coulomb_energy twice: once for the coulomb energy in dissolved
+                state and once for the coulomb energy in vacuum state.
+            - polarization_energy: for the polarization energy.
+    
+    Inputs:
+    ------
+        q: array size N with charges of multipoles
+        p: array size (Nqx3) with dipoles of multipoles
+        Q: array size (Nqx3x3) with quadrupoles of multipoles
+        alpha: array size (Nqx3x3) with polarizability of dipoles (considered as a tensor)
+        x_q: array size (Nqx3) with position of multipoles
+        E_1: (float) dielectric constant inside cavity
+        E_1: (float) dielectric constant outside cavity
+        kappa: (float) inverse of Debye length
+        R: (float) radius of spherical cavity
+        a: (float) radius of Stern layer
+        N: (int) number of terms in spherical harmonic expansion
+
+    Returns:
+    -------
+        solvation_energy: (float) Total free energy to dissolve a spherical
+            molecule with polarizable dipoles.
     """
 
+    solvent_contribution, Epol_diss, p_pol_diss = \
+            an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
-    return E_pol
+    p_diss_tot = p + p_pol_diss
+    coulomb_dissolved = coulomb_energy(q, p_diss_tot, Q, xq, E_1)
 
+    p_pol_vac, Epol_vac = coulomb_polarizable_dipole(q, p, Q, alpha, xq, E_1)
+    p_vac_tot = p + p_pol_vac
+    coulomb_vacuum = coulomb_energy(q, p_vac_tot, Q, xq, E_1)
+
+    pol_energy = polarization_energy(p_pol_diss, p_pol_vac, Epol_diss, Epol_vac)
+    
+    solvation_energy = solvent_contribution + coulomb_dissolved - coulomb_vacuum + pol_energy
+    print 'solvent: %f\ncoulomb diss: %f\ncoulomb vac: %f\npolarization: %f'%(solvent_contribution,\
+                                                        coulomb_dissolved, coulomb_vacuum, pol_energy)
+
+    return solvation_energy
 
 def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     """
@@ -595,9 +652,9 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     Returns:
     -------
         E_P: (float) Solvent contribution to free energy
-        DPHI: array of size (Nx3) with derivative of potential at multipole 
-                sites (used to obtain the field required to compute the 
-                polarization energy)
+        Epol: array of size (Nx3) with total field at multipole 
+                sites, which polarizes the multipoles (used to 
+                obtain the field required to compute the polarization energy)
         p_pol: array of size (Nx3) with polarized component of multipoles
     """
         
@@ -612,12 +669,15 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     DDPHI = zeros((len(q),3,3))
     p_pol = zeros((len(q),3))
     p_pol_prev = ones((len(q),3))
+    p_tot = p.copy()
 
     iterations = 0
     while dipole_diff>1e-10:
     
+        coul_field = coulomb_field(q, p_tot, Q, xq, E_1)
+        Epol = coul_field - DPHI
         for K in range(len(q)):
-            p_pol[K] = -dot(alpha[K],DPHI[K])
+            p_pol[K] = dot(alpha[K],Epol[K])
         
         p_tot = p + p_pol
 
@@ -654,9 +714,9 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
 #                    print n,m,phi,dphi
 #                    print ddphi
             
-            PHI[K]   = real(phi)
-            DPHI[K]  = real(dphi)
-            DDPHI[K] = real(ddphi)
+            PHI[K]   = real(phi)/(4*pi)
+            DPHI[K]  = real(dphi)/(4*pi)
+            DDPHI[K] = real(ddphi)/(4*pi)
 
         iterations += 1
 
@@ -664,10 +724,10 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
         p_pol_prev = p_pol.copy()
 
 #       print iterations
-    cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
+    cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p_tot*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
-    return E_P, DPHI, p_pol
+    return E_P, Epol, p_pol
 
         
 def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
@@ -1790,7 +1850,7 @@ p   = array([[0.,1.,0.],[1.,0.,0.],[0.,0.,-1.]])
 #p   = array([[0.,1.,0.]])
 Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,1.,0.],[0.,0.,-1.]],[[1.,0.,0.],[0.,0.,0.],[0.,0.,-1.]]])
 #Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
-alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*10
 #alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
 xq  = array([[1e-12,1e-12,1e-12],[1.,1.41421356,1.],[-1.,-1.,1.41421356]])
 #xq  = array([[1.,1.,1.41421356]])
@@ -1807,15 +1867,17 @@ kappa = 0.125
 #energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
 #energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
 #energy_mult = an_multipole(q, p, Q, xq, E_1, E_2, R, N)
-#energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
+#energy_mult_pol, Epol, p_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-Ecoul =  coulomb_energy(q, p, Q, xq, E_1)
-print Ecoul
+energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
+
+#Ecoul =  coulomb_energy(q, p, Q, xq, E_1)
+#print Ecoul
 #print energy
 #print energy_sph
 #print energy_mult
-#print energy_mult_pol
+print energy_mult_pol
 #print energy_mult2
 
 #JtoCal = 4.184    
