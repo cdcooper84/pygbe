@@ -184,7 +184,7 @@ def vector_grad_rYnmst(m, n, rho, azim, zenit, Ynm_st):
 
     i_th = where(abs(zenit)>1e-10)[0] # Indices where theta is nonzero
     i_rh = where(rho>1e-16)[0]        # Indices where rho is nonzero
-    i_tr = where(rho>1e-16 and abs(zenit)>1e-10)[0] # Indices where rho and
+    i_tr = where(logical_and(rho>1e-16,abs(zenit)>1e-10))[0] # Indices where rho and
                                                     # theta are nonzero
 
     Ar = n*rho**(n-1)*Ynm_st
@@ -338,8 +338,7 @@ def computeYnm_derivatives(m,n,xq_k):
 def coulomb_potential(q, p, Q, xq, E):
     """
     Computes the electrostatic potential due to a point monopole, dipole, 
-    quadrupole distribution at the position of the multipoles. The field 
-    is defined as E=-nabla*phi.
+    quadrupole distribution at the position of the multipoles.
     See equation 29 of amoeba bem document. 
     Inputs:
     ------- 
@@ -359,14 +358,12 @@ def coulomb_potential(q, p, Q, xq, E):
         Ri = xq[i]-xq
         Rnorm = sqrt(sum(Ri*Ri, axis=1))
 
-        if Rnorm>1e-12: # skip singularity
-            T0 = 1/Rnorm
-            T1 = Ri/Rnorm**3
+        for j in where(Rnorm>1e-10)[0]: #remove singularity
+            T0 = 1/Rnorm[j]
+            T1 = Ri[j,:]/Rnorm[j]**3
+            T2[j,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
 
-            for j in range(len(xq)):
-                T2[j,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
-
-            phi[i] = q*T0 + sum(T1*p,axis=1) + 0.5*sum(sum(T2*Q,axis=2),axis=1)
+            phi[i] += q[j]*T0 + sum(T1[:]*p[j,:]) + 0.5*sum(sum(T2[j,:,:]*Q[j,:,:],axis=1),axis=0)
 
     phi /= (4*pi*E)
 
@@ -420,11 +417,89 @@ def coulomb_field(q, p, Q, xq, E):
     Efield /= -(4*pi*E)
     return Efield
 
+def coulomb_ddpotential(q, p, Q, xq, E):
+    """
+    Computes the second derivative of the electrostatic potential due 
+    to a point monopole, dipole, and quadrupole distribution at the 
+    position of the multipoles. See equation 29 and 43 of amoeba bem document. 
 
-def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
-    # Computes polarized dipole component of a collection of polarizabe multipoles
-    # Used in eq 56 of kirkwood multipole
+    Inputs:
+    ------- 
+        q: array size N with charges
+        p: array size (Nx3) with dipoles
+        Q: array size (Nx3x3) with quadrupoles
+        xq: array size (Nx3) with positions of multipoles
+        E: dielectric constant
+    Returns:
+    -------
+        ddphi: second derivative of electrostatic potential at the 
+                position of the multipoles
+    """
+    ddphi = zeros((len(xq),3,3))
+    T0 = zeros((len(xq),3,3))
+    T1 = zeros((len(xq),3,3,3))
+    T2 = zeros((len(xq),3,3,3,3))
+    for i in range(len(xq)):
+        Ri = xq[i]-xq
+        Rnorm = sqrt(sum(Ri*Ri, axis=1))
+
+        for j in where(Rnorm>1e-10)[0]: #remove singularity
+            T0[j,:,:] = -identity(3)/Rnorm[j]**3 + 3*ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
+
+            # the ordering in aux will be k,j,i looking at Eq 52 of kirkwood multipole
+            aux = zeros((3,3,3))
+            for k in range(3):
+                aux[k,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])*Ri[j,k]
+            aux *= 15/Rnorm[j]**7
+
+            for k in range(3):
+                aux[:,:,k] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5
+                aux[:,k,:] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5
+                aux[k,:,:] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5
+
+            T1[j,:,:,:] = aux
+
+            for k in range(3):
+                for l in range(3):
+                    for m in range(3):
+                        for n in range(3):
+                            dkl = (k==l)*1.0
+                            dkm = (k==m)*1.0
+                            dkn = (k==n)*1.0
+                            dlm = (l==m)*1.0
+                            dln = (l==n)*1.0
+
+                            T2[j,k,l,m,n] = -7*Ri[j,k]*Ri[j,l]*Ri[j,m]*Ri[j,n]/Rnorm[j]**2  \
+                                           + Ri[j,m]*Ri[j,n]*dkl + Ri[j,l]*Ri[j,n]*dkm      \
+                                           + Ri[j,m]*Ri[j,l]*dkn + Ri[j,k]*Ri[j,n]*dlm      \
+                                           + Ri[j,m]*Ri[j,k]*dln
+            T2 *= -5/Rnorm[j]**7
+
+            for k in range(3):
+                for l in range(3):
+                    ddphi[i,k,l] += T0[j,k,l]*q[j] + sum(T1[j,k,l,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,l,:,:]*Q[j,:,:],axis=1),axis=0)
     
+    ddphi /= (4*pi*E)
+
+    return ddphi
+ 
+def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
+    """
+    Computes polarized dipole component of a collection of polarizabe multipoles
+    Used in eq 56 of kirkwood multipole
+
+    Inputs:
+    ------
+        q: array size N with charges of multipoles
+        p_per: array size (Nx3) with permanent dipoles of multipoles
+        Q: array size (Nx3x3) with quadrupoles of multipoles
+        alpha: array size (Nqx3x3) with polarizability of dipoles (considered as a tensor)
+        xq: array size Nx3 with positions of multipoles
+        E : float, dielectric constant
+    Returns:
+    -------
+        p_pol: array size (Nx3) with polarizable component of dipoles
+    """
     p_pol      = zeros((len(xq),3))
     dipole_diff= 1. 
     p_pol_prev = ones((len(xq),3))
@@ -444,72 +519,87 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
 
     return p_pol
 
-def coulomb_energy(xq, E, p_solv):
+def coulomb_energy(q, p, Q, xq, E):
     """
-    Computes the Coulomb potential (and first and second derivatives) of a collection 
-    of multipoles, according to equation 43 of amoeba bem document.
+    Computes the Coulomb energy from a collection of point
+    multipoles, according to equation 38 of amoeba bem document.
     
     Inputs:
     ------ 
+        q: array size N with charges of multipoles
+        p: array size (Nx3) with dipoles of multipoles
+        Q: array size (Nx3x3) with quadrupoles of multipoles
         xq: array size Nx3 with positions of multipoles
         E : float, dielectric constant
-        p_solv: array size Nx3 with polarizable component of dipoles in dissolved protein
     Outputs:
-    ------
-        phi: array size N with coulomb potential
-        dphi: array size Nx3 with first derivative of coulomb potential
-        ddphi: array size Nx3x3 with second derivatives of coulomb potential
+    -------
+        E_coul: (float) free energy  
     """
-    phi   = zeros(len((xq))
-    dphi  = zeros((len((xq),3))
-    ddphi = zeros((len((xq),3,3))
-
-    for i in range(len(xq)):
-        Ri = xq[i]-xq
-        Rnorm = sqrt(sum(Ri*Ri, axis=1))
-
-        for j in where(Rnorm>1e-10)[0]: #remove singularity
-            T0[j,:]   = Ri[j,:]/Rnorm[j]**3
-            T1[j,:,:] = identity(3)/Rnorm[j]**3 - \
-                        3*ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
-        
-            # the ordering in aux will be k,j,i looking at Eq 52 of kirkwood multipole
-            aux = zeros((3,3,3))
-            for k in range(3):
-                aux[k,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])*Ri[j,k]
-            aux *= -5/Rnorm[j]**7
-
-            for k in range(3):
-                aux[:,:,k] += identity(3)*Ri[j,k]/Rnorm[j]**5
-            for k in range(3):
-                aux[:,k,:] += identity(3)*Ri[j,k]/Rnorm[j]**5
-
-            T2[j,:,:,:] = aux
-
-            for k in range(3):
-                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0)
-
-    Efield /= -(4*pi*E)
-
-    return phi, dphi, ddphi
-
-def coulomb_polarizable_energy(q, p_per, Q, alpha, xq, E):
-
     qe = 1.60217646e-19
     Na = 6.0221415e23
     E_0 = 8.854187818e-12
     cal2J = 4.184 
 
-    for i in range(len(xq)):
-        
-    
+    phi   = coulomb_potential(q, p, Q, xq, E)
+    dphi  = -1*coulomb_field(q, p, Q, xq, E)
+    ddphi = coulomb_ddpotential(q, p, Q, xq, E)
 
-    cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
-    E_coul = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+    cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
+    E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/6)
 
-    return E_coul
+    return E_coul 
+
+def polarization_energy(q, p, Q, xq, E):
+    """
+    Computes the polarization energy 
+    to a point monopole, dipole, and quadrupole distribution at the 
+    position of the multipoles. See equation 29 and 43 of amoeba bem document. 
+
+    Inputs:
+    ------- 
+        q: array size N with charges
+        p: array size (Nx3) with dipoles
+        Q: array size (Nx3x3) with quadrupoles
+        xq: array size (Nx3) with positions of multipoles
+        E: dielectric constant
+    Returns:
+    -------
+        ddphi: second derivative of electrostatic potential at the 
+                position of the multipoles
+    """
+
+
+    return E_pol
+
 
 def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
+    """
+    Computes the solvent contribution to free energy for a spherical cavity
+    with a random distribution of point multipoles with a polarizable dipole.
+    This definition is according to Equation 38 and 39 of amoeba bem document.
+    
+    Inputs:
+    ------
+        q: array size N with charges of multipoles
+        p: array size (Nqx3) with dipoles of multipoles
+        Q: array size (Nqx3x3) with quadrupoles of multipoles
+        alpha: array size (Nqx3x3) with polarizability of dipoles (considered as a tensor)
+        x_q: array size (Nqx3) with position of multipoles
+        E_1: (float) dielectric constant inside cavity
+        E_1: (float) dielectric constant outside cavity
+        kappa: (float) inverse of Debye length
+        R: (float) radius of spherical cavity
+        a: (float) radius of Stern layer
+        N: (int) number of terms in spherical harmonic expansion
+
+    Returns:
+    -------
+        E_P: (float) Solvent contribution to free energy
+        DPHI: array of size (Nx3) with derivative of potential at multipole 
+                sites (used to obtain the field required to compute the 
+                polarization energy)
+        p_pol: array of size (Nx3) with polarized component of multipoles
+    """
         
     qe = 1.60217646e-19
     Na = 6.0221415e23
@@ -575,9 +665,9 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
 
 #       print iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*4*pi*E_0)
-    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p_tot*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
-    return E_P
+    return E_P, DPHI, p_pol
 
         
 def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
@@ -656,7 +746,8 @@ def an_multipole(q, p, Q, xq, E_1, E_2, R, N):
                            + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                            + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
             
-                Enm = monopole + dipole + quadrupole
+                Enm = monopole + dipole + quadrupole/6 # divided by 6: see modified Kirkwood Part 2b
+
                 
                 C2 = (kappa*a)**2*get_K(kappa*a,n-1)/(get_K(kappa*a,n+1) + \
                     n*(E_2-E_1)/((n+1)*E_2+n*E_1)*(R/a)**(2*n+1)*(kappa*a)**2*get_K(kappa*a,n-1)/((2*n-1)*(2*n+1)))
@@ -1701,14 +1792,14 @@ Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,1.,0.],[0.,0.,-
 #Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
 alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])
 #alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
-xq  = array([[1e-12,1e-12,1e-12],[1.,1.,1.41421356],[-1.,-1.,1.41421356]])
+xq  = array([[1e-12,1e-12,1e-12],[1.,1.41421356,1.],[-1.,-1.,1.41421356]])
 #xq  = array([[1.,1.,1.41421356]])
 #xq  = array([[1e-12,1e-12,1e-12]])
 E_1 = 4.
 E_2 = 80.
 E_0 = 8.854187818e-12
 R   = 4.
-N   = 20
+N   = 15
 Na  = 6.0221415e23
 a   = R
 kappa = 0.125
@@ -1719,9 +1810,8 @@ kappa = 0.125
 #energy_mult_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-p_pol =  coulomb_polarizable_dipole(q, p, Q, alpha, xq, E_1)
-print p_pol
-
+Ecoul =  coulomb_energy(q, p, Q, xq, E_1)
+print Ecoul
 #print energy
 #print energy_sph
 #print energy_mult
