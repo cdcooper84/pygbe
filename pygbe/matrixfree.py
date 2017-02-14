@@ -23,7 +23,7 @@
 import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
-from tree.direct import coulomb_direct
+from tree.direct import coulomb_direct, coulomb_energy_multipole
 from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_d2phirdr2
 from classes import parameters, index_constant
 import time
@@ -863,7 +863,14 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 def coulombEnergy(f, param):
 
     point_energy = numpy.zeros(len(f.q), param.REAL)
-    coulomb_direct(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, point_energy)
+    if len(f.p)==0: #only point charges
+        coulomb_direct(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, point_energy)
+    else: # contains multipoles
+        coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
+                                 f.p[:,0], f.p[:,1], f.p[:,2],
+                                 f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
+                                 f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
+                                 f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
 
     cal2J = 4.184
     C0 = param.qe**2*param.Na*1e-3*1e10/(cal2J*param.E_0)

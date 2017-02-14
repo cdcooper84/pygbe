@@ -1105,3 +1105,193 @@ void coulomb_direct(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt, int zt
         K_aux[i] = m[i]*sum;
     }
 }
+
+void coulomb_phi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
+                        REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
+                        REAL *Qzx, REAL *Qzy, REAL *Qzz, REAL *phi, int N)
+{
+    REAL Ri[3], Rnorm, R3, R5, sum;
+    REAL T0, T1[3], T2[3][3];
+    REAL eps = 1e-15;
+
+    for (int i=0; i<N; i++)
+    {
+        sum = 0.0;
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j]; 
+            Ri[1] = yt[i] - yt[j]; 
+            Ri[2] = zt[i] - zt[j]; 
+            Rnorm = sqrt(Ri[0]*Ri[0]+Ri[1]*Ri[1]+Ri[2]*Ri[2]+eps*eps);
+            R3 = Rnorm*Rnorm*Rnorm;
+            R5 = R3*Rnorm*Rnorm;
+            
+            if (Rnorm>1e-12) //remove singularity
+            {
+                T0 = 1/Rnorm;
+                for (int k=0; k<3; k++)
+                {
+                    T1[k] = Ri[k]/R3;
+                    for (int l=0; l<3; l++)
+                    {
+                        T2[k][l] = Ri[k]*Ri[l]/R5;   
+                    }
+                }                          
+                sum += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
+                + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                     + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
+                     + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
+            }
+        }
+        phi[i] += sum;
+    }
+}
+
+void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
+                        REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
+                        REAL *Qzx, REAL *Qzy, REAL *Qzz, REAL dphi[][3], int N)
+{
+    REAL Ri[3], Rnorm, R3, R5, R7, sum[3];
+    REAL T0, T1[3], T2[3][3];
+    REAL dkl, dkm;
+    REAL eps = 1e-15;
+
+    for (int i=0; i<N; i++)
+    {
+        sum = {0.0, 0.0, 0.0};
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j]; 
+            Ri[1] = yt[i] - yt[j]; 
+            Ri[2] = zt[i] - zt[j]; 
+            Rnorm = sqrt(Ri[0]*Ri[0]+Ri[1]*Ri[1]+Ri[2]*Ri[2]+eps*eps);
+            R3 = Rnorm*Rnorm*Rnorm;
+            R5 = R3*Rnorm*Rnorm;
+            R7 = R5*Rnorm*Rnorm;
+            
+            if (Rnorm>1e-12) //remove singularity
+            {
+                for (int k=0; k<3; k++)
+                {
+                    T0 = -Ri[k]/R3;
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+                        T1[l] = dkl/R3 - 3*Ri[k]*Ri[l]/R5;
+                        for (int m=0; m<3; m++)
+                        {
+                            dkm = (REAL)(k==m);
+                            T2[l][m] = (dkm+dkl)/R5 - 5*Ri[l]*Ri[m]*Ri[k]/R7;
+                        }
+                    }
+                    sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
+                           + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                                + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
+                                + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
+                }                          
+            }
+        }
+        dphi[i][0] += sum[0];
+        dphi[i][1] += sum[1];
+        dphi[i][2] += sum[2];
+    }
+}
+
+void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
+                        REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
+                        REAL *Qzx, REAL *Qzy, REAL *Qzz, REAL ddphi[][3][3], int N)
+{
+    REAL Ri[3], Rnorm, R3, R5, R7, R9, sum[3][3];
+    REAL T0, T1[3], T2[3][3];
+    REAL dkl, dkm, dlm, dkn, dln;
+    REAL eps = 1e-15;
+
+    for (int i=0; i<N; i++)
+    {
+        sum = {{0.0}};
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j]; 
+            Ri[1] = yt[i] - yt[j]; 
+            Ri[2] = zt[i] - zt[j]; 
+            Rnorm = sqrt(Ri[0]*Ri[0]+Ri[1]*Ri[1]+Ri[2]*Ri[2]+eps*eps);
+            R3 = Rnorm*Rnorm*Rnorm;
+            R5 = R3*Rnorm*Rnorm;
+            R7 = R5*Rnorm*Rnorm;
+            R9 = R3*R3*R3;
+            
+            if (Rnorm>1e-12) //remove singularity
+            {
+                for (int k=0; k<3; k++)
+                {
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+                        T0 = -dkl/R3 + 3*Ri[k]*Ri[l]/R5;
+
+                        for (int m=0; m<3; m++)
+                        {
+                            dkm = (REAL)(k==m);
+                            dlm = (REAL)(l==m);
+                            T1[m] = -3*(dkm+dkl+dlm)/R5 + 15*Ri[l]*Ri[m]*Ri[k]/R7;
+                                                    
+                            for (int n=0; n<3; n++)
+                            {
+                                dkn = (REAL)(k==n);
+                                dln = (REAL)(l==n);
+                                T2[m][n] = 35*Ri[k]*Ri[l]*Ri[m]*Ri[n]/R9
+                                        + 5*(Ri[m]*Ri[n]*dkl + Ri[l]*Ri[n]*dkm
+                                           + Ri[m]*Ri[l]*dkn + Ri[k]*Ri[n]*dlm
+                                           + Ri[m]*Ri[k]*dln)/R7;
+ 
+                            }
+                        }
+                        sum[k][l] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
+                               + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                                    + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
+                                    + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
+                    }
+                }                          
+            }
+        }
+        for (int k=0; k<3; k++)
+        {
+            for (int l=0; l<3; l++)
+            {
+                ddphi[i][k][l] += sum[k][l];
+            }
+        }
+    }
+}
+void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt, int ztSize, 
+                        REAL *q, int qSize, REAL *px, int pxSize, REAL *py, int pySize, REAL *pz, int pzSize, 
+                        REAL *Qxx, int QxxSize, REAL *Qxy, int QxySize, REAL *Qxz, int QxzSize, 
+                        REAL *Qyx, int QyxSize, REAL *Qyy, int QyySize, REAL *Qyz, int QyzSize, 
+                        REAL *Qzx, int QzxSize, REAL *Qzy, int QzySize, REAL *Qzz, int QzzSize, 
+                        REAL *K_aux, int K_auxSize)
+{
+    double phi  [xtSize];
+    double dphi [xtSize][3];
+    double ddphi[xtSize][3][3];
+
+    coulomb_phi_multipole(xt, yt, zt, q, px, py, pz,
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
+                           Qzx, Qzy, Qzz, phi, xtSize);
+    coulomb_dphi_multipole(xt, yt, zt, q, px, py, pz,
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
+                           Qzx, Qzy, Qzz, dphi, xtSize);
+    coulomb_ddphi_multipole(xt, yt, zt, q, px, py, pz,
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
+                           Qzx, Qzy, Qzz, ddphi, xtSize);
+
+    for (int i=0; i<xtSize; i++)
+    {
+        K_aux[i] = (q[i]*phi[i] 
+                  + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2] 
+                  +(Qxx[i]*ddphi[i][0][1] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
+                  + Qxy[i]*ddphi[i][1][1] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
+                  + Qxz[i]*ddphi[i][2][1] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.);
+    }
+    
+}
+

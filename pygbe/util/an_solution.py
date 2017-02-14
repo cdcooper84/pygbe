@@ -520,7 +520,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
 
     return p_pol, Efield
 
-def coulomb_energy(q, p, Q, xq, E):
+def coulomb_energy_multipole(q, p, Q, xq, E):
     """
     Computes the Coulomb energy from a collection of point
     multipoles, according to equation 38 of amoeba bem document.
@@ -587,7 +587,7 @@ def solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     in vacuum and polarization energy.
     This function calls: 
             - an_multipole_polarizable for the solvent contribution.
-            - coulomb_energy twice: once for the coulomb energy in dissolved
+            - coulomb_energy_mulitpole twice: once for the coulomb energy in dissolved
                 state and once for the coulomb energy in vacuum state.
             - polarization_energy: for the polarization energy.
     
@@ -615,11 +615,11 @@ def solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
             an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
     p_diss_tot = p + p_pol_diss
-    coulomb_dissolved = coulomb_energy(q, p_diss_tot, Q, xq, E_1)
+    coulomb_dissolved = coulomb_energy_multipole(q, p_diss_tot, Q, xq, E_1)
 
     p_pol_vac, Epol_vac = coulomb_polarizable_dipole(q, p, Q, alpha, xq, E_1)
     p_vac_tot = p + p_pol_vac
-    coulomb_vacuum = coulomb_energy(q, p_vac_tot, Q, xq, E_1)
+    coulomb_vacuum = coulomb_energy_multipole(q, p_vac_tot, Q, xq, E_1)
 
     pol_energy = polarization_energy(p_pol_diss, p_pol_vac, Epol_diss, Epol_vac)
     
@@ -1845,12 +1845,12 @@ print E_inter
 
 
 
-q   = array([[1.],[-1.],[-1.]])
+q   = array([1.,-1.,-1.])
 p   = array([[0.,1.,0.],[1.,0.,0.],[0.,0.,-1.]])
 #p   = array([[0.,1.,0.]])
 Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,1.,0.],[0.,0.,-1.]],[[1.,0.,0.],[0.,0.,0.],[0.,0.,-1.]]])
 #Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
-alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*10
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0
 #alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
 xq  = array([[1e-12,1e-12,1e-12],[1.,1.41421356,1.],[-1.,-1.,1.41421356]])
 #xq  = array([[1.,1.,1.41421356]])
@@ -1872,7 +1872,7 @@ kappa = 0.125
 
 energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
-#Ecoul =  coulomb_energy(q, p, Q, xq, E_1)
+#Ecoul =  coulomb_energy_multipole(q, p, Q, xq, E_1)
 #print Ecoul
 #print energy
 #print energy_sph
