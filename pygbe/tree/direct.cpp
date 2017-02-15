@@ -1266,6 +1266,7 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
 }
 void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt, int ztSize, 
                         REAL *q, int qSize, REAL *px, int pxSize, REAL *py, int pySize, REAL *pz, int pzSize, 
+                        REAL *px_pol, int px_polSize, REAL *py_pol, int py_polSize, REAL *pz_pol, int pz_polSize, 
                         REAL *Qxx, int QxxSize, REAL *Qxy, int QxySize, REAL *Qxz, int QxzSize, 
                         REAL *Qyx, int QyxSize, REAL *Qyy, int QyySize, REAL *Qyz, int QyzSize, 
                         REAL *Qzx, int QzxSize, REAL *Qzy, int QzySize, REAL *Qzz, int QzzSize, 
@@ -1274,14 +1275,22 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
     double phi  [xtSize];
     double dphi [xtSize][3];
     double ddphi[xtSize][3][3];
+    double px_tot[xtSize], py_tot[xtSize], pz_tot[xtSize];
+    
+    for (int i=0; i<xtSize; i++)
+    {
+        px_tot[i] = px[i] + px_pol[i];
+        py_tot[i] = py[i] + py_pol[i];
+        pz_tot[i] = pz[i] + pz_pol[i];
+    }
 
-    coulomb_phi_multipole(xt, yt, zt, q, px, py, pz,
+    coulomb_phi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, phi, xtSize);
-    coulomb_dphi_multipole(xt, yt, zt, q, px, py, pz,
+    coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, dphi, xtSize);
-    coulomb_ddphi_multipole(xt, yt, zt, q, px, py, pz,
+    coulomb_ddphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, ddphi, xtSize);
 
@@ -1292,6 +1301,7 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
                   +(Qxx[i]*ddphi[i][0][0] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
                   + Qxy[i]*ddphi[i][1][0] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
                   + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.);
+                    // Energy calculated with p (rather than p_tot) to account for polarization energy
     }
     
 }

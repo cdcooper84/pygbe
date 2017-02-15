@@ -148,6 +148,7 @@ class fields():
         self.xq     = []    # position of charges
         self.q      = []    # value of charges
         self.p      = []    # value of dipole
+        self.p_pol  = []    # value of dipole
         self.Q      = []    # value of Quadrupole
         self.coul   = []    # 1: perform Coulomb interaction calculation
                             # 0: don't do Coulomb calculation
@@ -864,6 +865,7 @@ def initializeField(filename, param):
             Nchild_aux += int(Nchild[i])-1                             # Point to child for next surface
             Nchild_aux += 1
 
+        field_aux.p_pol = numpy.zeros((len(field_aux.p),3))
         field_array.append(field_aux)
     return field_array
 

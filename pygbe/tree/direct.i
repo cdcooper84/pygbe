@@ -64,6 +64,7 @@ extern void direct_c_2derivative(double *dKxx_aux, int dKxx_auxSize, double *dKx
 
 extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
+                        double *px_pol, int px_polSize, double *py_pol, int py_polSize, double *pz_pol, int pz_polSize, 
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
@@ -135,6 +136,9 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *px, int pxSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *py, int pySize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *pz, int pzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *px_pol, int px_polSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *py_pol, int py_polSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *pz_pol, int pz_polSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxx, int QxxSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxy, int QxySize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxz, int QxzSize)};
@@ -216,6 +220,7 @@ extern void coulomb_direct(double *xt, int xtSize, double *yt, int ytSize, doubl
 
 extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
+                        double *px_pol, int px_polSize, double *py_pol, int py_polSize, double *pz_pol, int pz_polSize, 
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
@@ -280,6 +285,9 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
 %clear (double *px, int pxSize); 
 %clear (double *py, int pySize); 
 %clear (double *pz, int pzSize);
+%clear (double *px_pol, int px_polSize); 
+%clear (double *py_pol, int py_polSize); 
+%clear (double *pz_pol, int pz_polSize);
 %clear (double *Qxx, int QxxSize); 
 %clear (double *Qxy, int QxySize); 
 %clear (double *Qxz, int QxzSize);

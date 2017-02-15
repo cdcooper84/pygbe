@@ -868,6 +868,7 @@ def coulombEnergy(f, param):
     else: # contains multipoles
         coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
                                  f.p[:,0], f.p[:,1], f.p[:,2],
+                                 f.p_pol[:,0], f.p_pol[:,1], f.p_pol[:,2],
                                  f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
                                  f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
                                  f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
