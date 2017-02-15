@@ -1181,9 +1181,10 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
                         for (int m=0; m<3; m++)
                         {
                             dkm = (REAL)(k==m);
-                            T2[l][m] = (dkm+dkl)/R5 - 5*Ri[l]*Ri[m]*Ri[k]/R7;
+                            T2[l][m] = (dkm*Ri[l]+dkl*Ri[m])/R5 - 5*Ri[l]*Ri[m]*Ri[k]/R7;
                         }
                     }
+
                     sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
                            + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
                                 + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
@@ -1233,14 +1234,14 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
                         {
                             dkm = (REAL)(k==m);
                             dlm = (REAL)(l==m);
-                            T1[m] = -3*(dkm+dkl+dlm)/R5 + 15*Ri[l]*Ri[m]*Ri[k]/R7;
+                            T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])/R5 + 15*Ri[l]*Ri[m]*Ri[k]/R7;
                                                     
                             for (int n=0; n<3; n++)
                             {
                                 dkn = (REAL)(k==n);
                                 dln = (REAL)(l==n);
                                 T2[m][n] = 35*Ri[k]*Ri[l]*Ri[m]*Ri[n]/R9
-                                        + 5*(Ri[m]*Ri[n]*dkl + Ri[l]*Ri[n]*dkm
+                                        - 5*(Ri[m]*Ri[n]*dkl + Ri[l]*Ri[n]*dkm
                                            + Ri[m]*Ri[l]*dkn + Ri[k]*Ri[n]*dlm
                                            + Ri[m]*Ri[k]*dln)/R7;
  
@@ -1287,10 +1288,10 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
     for (int i=0; i<xtSize; i++)
     {
         K_aux[i] = (q[i]*phi[i] 
-                  + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2] 
-                  +(Qxx[i]*ddphi[i][0][1] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
-                  + Qxy[i]*ddphi[i][1][1] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
-                  + Qxz[i]*ddphi[i][2][1] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.);
+                  + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2]
+                  +(Qxx[i]*ddphi[i][0][0] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
+                  + Qxy[i]*ddphi[i][1][0] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
+                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.);
     }
     
 }

@@ -1870,14 +1870,14 @@ kappa = 0.125
 #energy_mult_pol, Epol, p_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
+#energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
 #Ecoul =  coulomb_energy_multipole(q, p, Q, xq, E_1)
 #print Ecoul
 #print energy
 #print energy_sph
 #print energy_mult
-print energy_mult_pol
+#print energy_mult_pol
 #print energy_mult2
 
 #JtoCal = 4.184    
