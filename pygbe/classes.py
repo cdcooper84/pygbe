@@ -198,6 +198,7 @@ class parameters():
         self.REAL          = 0               # Data type
         self.E_field       = []              # Regions where energy will be calculated
         self.GPU           = -1              # =1: with GPU, =0: no GPU
+        self.args          = []              # stores the command-line arguments 
 
 
 class index_constant():

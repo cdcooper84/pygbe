@@ -28,6 +28,7 @@ from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr,
 from classes import parameters, index_constant
 import time
 from util.semi_analytical import GQ_1D
+from argparse import ArgumentParser
 
 # PyCUDA libraries
 try:
@@ -221,15 +222,16 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                     else:
                         aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
-                        if len(field_array[j].p)>0:                        # Dipole component
-                            aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
-                            aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+                        if par_reac.args.polarizable: # if polarizable multipoles
+                            if len(field_array[j].p)>0:                        # Dipole component
+                                aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
+                                aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
 
-                        if len(field_array[j].Q)>0:                        # Quadrupole component
-                            aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
-                                                [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
-                                                [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                            aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                            if len(field_array[j].Q)>0:                        # Quadrupole component
+                                aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
+                                                    [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
+                                                    [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
+                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
 
 #               For CHILD surfaces, q contributes to RHS in 
 #               EXTERIOR equation (hence Precond[1,:] and [3,:])
@@ -274,15 +276,17 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                     else:
                         aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
-                        if len(field_array[j].p)>0:                        # Dipole component
-                            aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
-                            aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
 
-                        if len(field_array[j].Q)>0:                        # Quadrupole component
-                            aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
-                                                [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
-                                                [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                            aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                        if param.args.polarizable: # if polarizable multipoles
+                            if len(field_array[j].p)>0:                        # Dipole component
+                                aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
+                                aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+
+                            if len(field_array[j].Q)>0:                        # Quadrupole component
+                                aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
+                                                    [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
+                                                    [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
+                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
 
 #               No preconditioner
 #                F[s_start:s_start+s_size] += aux
@@ -730,18 +734,20 @@ def calculateEsolv(surf_array, field_array, param, kernel):
             AI_int = 0
             Naux = 0
             phi_reac = numpy.zeros(len(field_array[f].q))
-            dphix_reac = numpy.zeros(len(field_array[f].p))
-            dphiy_reac = numpy.zeros(len(field_array[f].p))
-            dphiz_reac = numpy.zeros(len(field_array[f].p))
-            dphixx_reac = numpy.zeros(len(field_array[f].Q))
-            dphixy_reac = numpy.zeros(len(field_array[f].Q))
-            dphixz_reac = numpy.zeros(len(field_array[f].Q))
-            dphiyx_reac = numpy.zeros(len(field_array[f].Q))
-            dphiyy_reac = numpy.zeros(len(field_array[f].Q))
-            dphiyz_reac = numpy.zeros(len(field_array[f].Q))
-            dphizx_reac = numpy.zeros(len(field_array[f].Q))
-            dphizy_reac = numpy.zeros(len(field_array[f].Q))
-            dphizz_reac = numpy.zeros(len(field_array[f].Q))
+
+            if par_reac.args.polarizable: # if polarizable multipoles
+                dphix_reac = numpy.zeros(len(field_array[f].p))
+                dphiy_reac = numpy.zeros(len(field_array[f].p))
+                dphiz_reac = numpy.zeros(len(field_array[f].p))
+                dphixx_reac = numpy.zeros(len(field_array[f].Q))
+                dphixy_reac = numpy.zeros(len(field_array[f].Q))
+                dphixz_reac = numpy.zeros(len(field_array[f].Q))
+                dphiyx_reac = numpy.zeros(len(field_array[f].Q))
+                dphiyy_reac = numpy.zeros(len(field_array[f].Q))
+                dphiyz_reac = numpy.zeros(len(field_array[f].Q))
+                dphizx_reac = numpy.zeros(len(field_array[f].Q))
+                dphizy_reac = numpy.zeros(len(field_array[f].Q))
+                dphizz_reac = numpy.zeros(len(field_array[f].Q))
 
 #           First look at CHILD surfaces
 #           Need to account for normals pointing outwards
@@ -764,33 +770,37 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
-                    if len(field_array[f].p)>0:
-                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
-                    if len(field_array[f].Q)>0:
-                        dphixx_aux, dphixy_aux, dphixz_aux, \
-                        dphiyx_aux, dphiyy_aux, dphiyz_aux, \
-                        dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+
+                    if par_reac.args.polarizable: # if polarizable multipoles
+                        if len(field_array[f].p)>0:
+                            dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                        if len(field_array[f].Q)>0:
+                            dphixx_aux, dphixy_aux, dphixz_aux, \
+                            dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                            dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                         
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
                 
                 AI_int += AI
                 phi_reac -= phi_aux # Minus sign to account for normal pointing out
-                if len(field_array[f].p)>0:
-                    dphix_reac -= dphix_aux
-                    dphiy_reac -= dphiy_aux
-                    dphiz_reac -= dphiz_aux
 
-                if len(field_array[f].Q)>0:
-                    dphixx_reac -= dphixx_aux
-                    dphixy_reac -= dphixy_aux
-                    dphixz_reac -= dphixz_aux
-                    dphiyx_reac -= dphiyx_aux
-                    dphiyy_reac -= dphiyy_aux
-                    dphiyz_reac -= dphiyz_aux
-                    dphizx_reac -= dphizx_aux
-                    dphizy_reac -= dphizy_aux
-                    dphizz_reac -= dphizz_aux
+                if par_reac.args.polarizable: # if polarizable multipoles
+                    if len(field_array[f].p)>0:
+                        dphix_reac -= dphix_aux
+                        dphiy_reac -= dphiy_aux
+                        dphiz_reac -= dphiz_aux
+
+                    if len(field_array[f].Q)>0:
+                        dphixx_reac -= dphixx_aux
+                        dphixy_reac -= dphixy_aux
+                        dphixz_reac -= dphixz_aux
+                        dphiyx_reac -= dphiyx_aux
+                        dphiyy_reac -= dphiyy_aux
+                        dphiyz_reac -= dphiyz_aux
+                        dphizx_reac -= dphizx_aux
+                        dphizy_reac -= dphizy_aux
+                        dphizz_reac -= dphizz_aux
 
 #           Now look at PARENT surface
             if len(field_array[f].parent)>0:
@@ -807,12 +817,14 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
-                    if len(field_array[f].p)>0:
-                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
-                    if len(field_array[f].Q)>0:
-                        dphixx_aux, dphixy_aux, dphixz_aux, \
-                        dphiyx_aux, dphiyy_aux, dphiyz_aux, \
-                        dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+
+                    if par_reac.args.polarizable: # if polarizable multipoles
+                        if len(field_array[f].p)>0:
+                            dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
+                        if len(field_array[f].Q)>0:
+                            dphixx_aux, dphixy_aux, dphixz_aux, \
+                            dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                            dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2 (s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
                         
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, s.dphi, s, field_array[f], par_reac, kernel)
@@ -820,38 +832,40 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                 AI_int += AI
                 phi_reac += phi_aux 
 
-                if len(field_array[f].p)>0:
-                    dphix_reac += dphix_aux
-                    dphiy_reac += dphiy_aux
-                    dphiz_reac += dphiz_aux
-                if len(field_array[f].Q)>0:
-                    dphixx_reac += dphixx_aux
-                    dphixy_reac += dphixy_aux
-                    dphixz_reac += dphixz_aux
-                    dphiyx_reac += dphiyx_aux
-                    dphiyy_reac += dphiyy_aux
-                    dphiyz_reac += dphiyz_aux
-                    dphizx_reac += dphizx_aux
-                    dphizy_reac += dphizy_aux
-                    dphizz_reac += dphizz_aux
+                if par_reac.args.polarizable: # if polarizable multipoles
+                    if len(field_array[f].p)>0:
+                        dphix_reac += dphix_aux
+                        dphiy_reac += dphiy_aux
+                        dphiz_reac += dphiz_aux
+                    if len(field_array[f].Q)>0:
+                        dphixx_reac += dphixx_aux
+                        dphixy_reac += dphixy_aux
+                        dphixz_reac += dphixz_aux
+                        dphiyx_reac += dphiyx_aux
+                        dphiyy_reac += dphiyy_aux
+                        dphiyz_reac += dphiyz_aux
+                        dphizx_reac += dphizx_aux
+                        dphizy_reac += dphizy_aux
+                        dphizz_reac += dphizz_aux
 
             E_solv_aux += 0.5*C0*numpy.sum(field_array[f].q*phi_reac)
     
-            if len(field_array[f].p)>0:
-                E_solv_aux += 0.5*C0*numpy.sum(field_array[f].p[:,0]*dphix_reac +\
-                                               field_array[f].p[:,1]*dphiy_reac +\
-                                               field_array[f].p[:,2]*dphiz_reac)
+            if par_reac.args.polarizable: # if polarizable multipoles
+                if len(field_array[f].p)>0:
+                    E_solv_aux += 0.5*C0*numpy.sum(field_array[f].p[:,0]*dphix_reac +\
+                                                   field_array[f].p[:,1]*dphiy_reac +\
+                                                   field_array[f].p[:,2]*dphiz_reac)
 
-            if len(field_array[f].Q)>0:
-                E_solv_aux += 0.5*C0*(1/6.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
-                                                       field_array[f].Q[:,0,1]*dphixy_reac +\
-                                                       field_array[f].Q[:,0,2]*dphixz_reac +\
-                                                       field_array[f].Q[:,1,0]*dphiyx_reac +\
-                                                       field_array[f].Q[:,1,1]*dphiyy_reac +\
-                                                       field_array[f].Q[:,1,2]*dphiyz_reac +\
-                                                       field_array[f].Q[:,2,0]*dphizx_reac +\
-                                                       field_array[f].Q[:,2,1]*dphizy_reac +\
-                                                       field_array[f].Q[:,2,2]*dphizz_reac )
+                if len(field_array[f].Q)>0:
+                    E_solv_aux += 0.5*C0*(1/6.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
+                                                           field_array[f].Q[:,0,1]*dphixy_reac +\
+                                                           field_array[f].Q[:,0,2]*dphixz_reac +\
+                                                           field_array[f].Q[:,1,0]*dphiyx_reac +\
+                                                           field_array[f].Q[:,1,1]*dphiyy_reac +\
+                                                           field_array[f].Q[:,1,2]*dphiyz_reac +\
+                                                           field_array[f].Q[:,2,0]*dphizx_reac +\
+                                                           field_array[f].Q[:,2,1]*dphizy_reac +\
+                                                           field_array[f].Q[:,2,2]*dphizz_reac )
 
             E_solv.append(E_solv_aux)
 
@@ -863,7 +877,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 def coulombEnergy(f, param):
 
     point_energy = numpy.zeros(len(f.q), param.REAL)
-    if len(f.p)==0: #only point charges
+    if param.args.polarizable==0: #only point charges
         coulomb_direct(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, point_energy)
     else: # contains multipoles
         coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 

@@ -89,6 +89,8 @@ def read_inputs():
                         help="Path to problem param file")
     parser.add_argument('-o', '--output', dest='output', type=str,
                         default='output', help="Output folder")
+    parser.add_argument('--polarizable', action='store_true', 
+                        help="Turn on polarizable multipole capabilities")
 
     return parser.parse_args()
 
@@ -185,6 +187,7 @@ def main(log_output=True):
 
     ### Read parameters
     param = parameters()
+    param.args = args
     precision = readParameters(param,paramfile)
 
     param.Nm            = (param.P+1)*(param.P+2)*(param.P+3)/6     # Number of terms in Taylor expansion
