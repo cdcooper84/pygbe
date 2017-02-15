@@ -107,6 +107,7 @@ def readpqr(filename, REAL):
     q   = []
     p   = []
     Q   = []
+    alpha = []
     for line in file(filename):
         line = numpy.array(line.split())
         line_aux = []
@@ -136,10 +137,12 @@ def readpqr(filename, REAL):
             z = line_aux[2]
             pos.append([x,y,z])
 
-            if len(line)>12:
+            if len(line)>12: # if multipole
                 q.append(line_aux[3])
                 p.append(numpy.array([line_aux[4],line_aux[5],line_aux[6]]))
                 Q.append(numpy.reshape(numpy.array([line_aux[7],line_aux[8],line_aux[9],line_aux[10],line_aux[11],line_aux[12],line_aux[13],line_aux[14],line_aux[15]]),(3,3)))
+                if len(line_aux)>16: # if polarizable
+                    alpha.append(numpy.reshape(numpy.array([line_aux[16],line_aux[17],line_aux[18],line_aux[19],line_aux[20],line_aux[21],line_aux[22],line_aux[23],line_aux[24]]),(3,3)))
             else:
                 q.append(line_aux[3])
 
@@ -153,9 +156,10 @@ def readpqr(filename, REAL):
     q   = numpy.array(q)
     p   = numpy.array(p)
     Q   = numpy.array(Q)
+    alpha = numpy.array(alpha)
     Nq  = len(q)
 
-    return pos, q, p, Q, Nq
+    return pos, q, p, Q, alpha, Nq
 
 
 def readcrd(filename, REAL):
