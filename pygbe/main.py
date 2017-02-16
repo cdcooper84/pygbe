@@ -38,7 +38,7 @@ from classes import (surfaces, timings, parameters, index_constant,
                      dataTransfer, fill_phi)
 from output import printSummary
 from matrixfree import (generateRHS, generateRHS_gpu, calculateEsolv,
-                        coulombEnergy, calculateEsurf)
+                        coulombEnergy, calculateEsurf, coulomb_polarizable_dipole)
 
 from util.readData import readVertex, readTriangle, readpqr, readParameters
 from util.an_solution import an_P, two_sphere
@@ -325,12 +325,28 @@ def main(log_output=True):
     tic = time.time()
     i = -1
     E_coul = []
+    if param.args.polarizable:
+        E_coul_vac = []
+
     for f in field_array:
         i += 1
         if f.coulomb == 1:
-            print 'Calculate Coulomb energy for region %i'%i
-            E_coul.append(coulombEnergy(f, param))
-            print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)
+            if param.args.polarizable:
+                print 'Note: if multipoles are polarizables, coulomb energy'
+                print '      calculation has polarization energy substracted out'
+                print 'Calculate Coulomb energy in dissolved state for region %i'%i
+                E_coul.append(coulombEnergy(f, param))
+
+                print 'Calculate vacuum induced dipole'
+                f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
+                coulomb_polarizable_dipole(f, param) 
+                print 'Calculate Coulomb energy in vacuum for region %i'%i
+                E_coul_vac.append(coulombEnergy(f, param))
+                print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)
+            else:
+                print 'Calculate Coulomb energy for region %i'%i
+                E_coul.append(coulombEnergy(f, param))
+                print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)
     toc = time.time()
     print 'Time Ecoul: %fs'%(toc-tic)
 

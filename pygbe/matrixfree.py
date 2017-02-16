@@ -23,7 +23,7 @@
 import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
-from tree.direct import coulomb_direct, coulomb_energy_multipole
+from tree.direct import coulomb_direct, coulomb_energy_multipole, compute_induced_dipole
 from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_d2phirdr2
 from classes import parameters, index_constant
 import time
@@ -893,6 +893,50 @@ def coulombEnergy(f, param):
     Ecoul = numpy.sum(point_energy) * 0.5*C0/(4*pi*f.E)
     return Ecoul
 
+def coulomb_polarizable_dipole(f, param):
+    """  
+    Computes polarized dipole component of a collection of polarizabe multipoles
+
+    Inputs:
+    ------
+        f: class, region in the field array that contains the multipoles
+    param: class, parameters related to the surface.
+    Returns:
+    -------
+     None: modifies the f.p_pol member of the class f 
+    """
+    dipole_diff = 1.
+    iteration = 0
+    p_pol_prev = numpy.zeros((len(f.xq),3))
+
+    px_pol = numpy.zeros(len(f.xq))
+    py_pol = numpy.zeros(len(f.xq))
+    pz_pol = numpy.zeros(len(f.xq))
+
+    while dipole_diff>1e-10:
+        iteration += 1
+        
+        p_tot = f.p + f.p_pol
+
+        Efield = numpy.zeros((len(f.xq),3))
+        compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
+                               f.p[:,0], f.p[:,1], f.p[:,2],
+                               px_pol, py_pol, pz_pol,
+                               f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
+                               f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
+                               f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2],
+                               f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
+                               f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
+                               f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2], f.E)
+
+        f.p_pol[:,0] = px_pol 
+        f.p_pol[:,1] = py_pol 
+        f.p_pol[:,2] = pz_pol 
+
+        dipole_diff = numpy.sqrt(numpy.sum((numpy.linalg.norm(p_pol_prev-f.p_pol,axis=1))**2)/len(f.p_pol))
+        p_pol_prev = f.p_pol.copy()
+
+    print '%i iterations for vacuum induced dipole to converge'%iteration
 
 def calculateEsurf(surf_array, field_array, param, kernel):
 

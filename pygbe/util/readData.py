@@ -116,7 +116,7 @@ def readpqr(filename, REAL):
             if len(line)<12:
                 n_data = len(line)-6
             else:
-                n_data = len(line)-18
+                n_data = len(line)-27
             for l in range(n_data):
                 aux = line[5+len(line_aux)]
                 if len(aux)>14:
@@ -129,7 +129,7 @@ def readpqr(filename, REAL):
                     line_aux.append(REAL(line[5+len(line_aux)]))
 
             if len(line)>12:
-                line_aux.extend(REAL(line[-12:]))
+                line_aux.extend(REAL(line[-21:]))
 
 #            line_test.append(line[len(line)-1])
             x = line_aux[0]

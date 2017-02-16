@@ -518,6 +518,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
+    print 'Took %i iterations for vacuum induced dipole to converge'%iteration
     return p_pol, Efield
 
 def coulomb_energy_multipole(q, p, Q, xq, E):
@@ -1850,7 +1851,7 @@ p   = array([[0.,1.,0.],[1.,0.,0.],[0.,0.,-1.]])
 #p   = array([[0.,1.,0.]])
 Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,1.,0.],[0.,0.,-1.]],[[1.,0.,0.],[0.,0.,0.],[0.,0.,-1.]]])
 #Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]]])
-alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0
+alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])
 #alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]])*0.
 xq  = array([[1e-12,1e-12,1e-12],[1.,1.41421356,1.],[-1.,-1.,1.41421356]])
 #xq  = array([[1.,1.,1.41421356]])

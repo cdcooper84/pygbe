@@ -1306,3 +1306,39 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
     
 }
 
+void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt, int ztSize, 
+                        REAL *q, int qSize, REAL *px, int pxSize, REAL *py, int pySize, REAL *pz, int pzSize, 
+                        REAL *px_pol, int px_polSize, REAL *py_pol, int py_polSize, REAL *pz_pol, int pz_polSize, 
+                        REAL *Qxx, int QxxSize, REAL *Qxy, int QxySize, REAL *Qxz, int QxzSize, 
+                        REAL *Qyx, int QyxSize, REAL *Qyy, int QyySize, REAL *Qyz, int QyzSize, 
+                        REAL *Qzx, int QzxSize, REAL *Qzy, int QzySize, REAL *Qzz, int QzzSize, 
+                        REAL *alphaxx, int alphaxxSize, REAL *alphaxy, int alphaxySize, REAL *alphaxz, int alphaxzSize, 
+                        REAL *alphayx, int alphayxSize, REAL *alphayy, int alphayySize, REAL *alphayz, int alphayzSize, 
+                        REAL *alphazx, int alphazxSize, REAL *alphazy, int alphazySize, REAL *alphazz, int alphazzSize, 
+                        double E)
+{
+    double dphi [xtSize][3];
+    double px_tot[xtSize], py_tot[xtSize], pz_tot[xtSize];
+    
+    for (int i=0; i<xtSize; i++)
+    {
+        px_tot[i] = px[i] + px_pol[i];
+        py_tot[i] = py[i] + py_pol[i];
+        pz_tot[i] = pz[i] + pz_pol[i];
+    }
+
+    // Compute derivative of phi (negative of electric field)
+    coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
+                           Qzx, Qzy, Qzz, dphi, xtSize);
+
+    // p_pol = -grad(phi)
+    for (int i=0; i<xtSize; i++)
+    {
+        px_pol[i] = (-alphaxx[i]*dphi[i][0] - alphaxy[i]*dphi[i][1] - alphaxz[i]*dphi[i][2])/(4*M_PI*E);
+        py_pol[i] = (-alphayx[i]*dphi[i][0] - alphayy[i]*dphi[i][1] - alphayz[i]*dphi[i][2])/(4*M_PI*E);
+        pz_pol[i] = (-alphazx[i]*dphi[i][0] - alphazy[i]*dphi[i][1] - alphazz[i]*dphi[i][2])/(4*M_PI*E);
+    }
+    
+}
+

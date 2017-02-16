@@ -70,6 +70,16 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
                         double *K_aux, int K_auxSize);
 
+extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
+                        double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
+                        double *px_pol, int px_polSize, double *py_pol, int py_polSize, double *pz_pol, int pz_polSize, 
+                        double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
+                        double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
+                        double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
+                        double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
+                        double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
+                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, double E);
+
 %}
 
 %include "numpy.i"
@@ -148,6 +158,15 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *Qzx, int QzxSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qzy, int QzySize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qzz, int QzzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphaxx, int alphaxxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphaxy, int alphaxySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphaxz, int alphaxzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphayx, int alphayxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphayy, int alphayySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphayz, int alphayzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphazx, int alphazxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphazy, int alphazySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *alphazz, int alphazzSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mKc, int mKcSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mVc, int mVcSize)};
 %apply (int* IN_ARRAY1, int DIM1){(int *targets, int targetsSize)};
@@ -226,6 +245,16 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
                         double *K_aux, int K_auxSize);
 
+extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
+                        double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
+                        double *px_pol, int px_polSize, double *py_pol, int py_polSize, double *pz_pol, int pz_polSize, 
+                        double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
+                        double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
+                        double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
+                        double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
+                        double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
+                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, double E);
+
 %clear (double *K_aux, int K_auxSize); 
 %clear (double *dKx_aux, int dKx_auxSize); 
 %clear (double *dKy_aux, int dKy_auxSize); 
@@ -297,6 +326,15 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
 %clear (double *Qzx, int QzxSize); 
 %clear (double *Qzy, int QzySize); 
 %clear (double *Qzz, int QzzSize);
+%clear (double *alphaxx, int alphaxxSize); 
+%clear (double *alphaxy, int alphaxySize); 
+%clear (double *alphaxz, int alphaxzSize);
+%clear (double *alphayx, int alphayxSize); 
+%clear (double *alphayy, int alphayySize); 
+%clear (double *alphayz, int alphayzSize);
+%clear (double *alphazx, int alphazxSize); 
+%clear (double *alphazy, int alphazySize); 
+%clear (double *alphazz, int alphazzSize);
 %clear (double *mKc, int mKcSize);
 %clear (double *mVc, int mVcSize);
 %clear (int *targets, int targetsSize); 
