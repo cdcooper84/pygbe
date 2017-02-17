@@ -32,13 +32,14 @@ from argparse import ArgumentParser
 
 # Import self made modules
 from gmres import gmres_solver
-from projection import get_phir
+from projection import get_phir, get_dphirdr
 from classes import (surfaces, timings, parameters, index_constant,
                      fill_surface, initializeSurf, initializeField,
                      dataTransfer, fill_phi)
 from output import printSummary
 from matrixfree import (generateRHS, generateRHS_gpu, calculateEsolv,
-                        coulombEnergy, calculateEsurf, coulomb_polarizable_dipole)
+                        coulombEnergy, calculateEsurf, coulomb_polarizable_dipole,
+                        dissolved_polarizable_dipole)
 
 from util.readData import readVertex, readTriangle, readpqr, readParameters
 from util.an_solution import an_P, two_sphere
@@ -259,40 +260,116 @@ def main(log_output=True):
 
     timing = timings()
 
-    ### Generate RHS
-    print 'Generate RHS'
-    tic = time.time()
-    if param.GPU==0:
-        F = generateRHS(field_array, surf_array, param, kernel, timing, ind0)
-    elif param.GPU==1:
-        F = generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0)
-    toc = time.time()
-    rhs_time = toc-tic
+    if param.args.polarizable:
+        dipole_diff = 1.
+        iteration = 0
+        rhs_time = 0.
+        solve_time = 0.
+        phi = numpy.zeros(param.Neq)
 
-#    numpy.savetxt(os.path.join(output_dir,'RHS.txt'),F)
+        # array to store induced dipole in previous iteration step
+        p_pol_prev = []
+        for f in field_array:
+            if len(f.xq)>0:
+                p_pol_prev.append(numpy.zeros((len(f.xq),3)))
 
-    setup_time = toc-TIC
-    print 'List time          : %fs'%list_time
-    print 'Data transfer time : %fs'%transfer_time
-    print 'RHS generation time: %fs'%rhs_time
-    print '------------------------------'
-    print 'Total setup time   : %fs\n'%setup_time
+        setup_time = toc-TIC
+        print 'List time          : %fs'%list_time
+        print 'Data transfer time : %fs'%transfer_time
+        print '------------------------------'
+        print 'Total setup time   : %fs\n'%setup_time
 
-    tic = time.time()
+        # finer parameters for reaction field calculation
+        par_reac = parameters()
+        par_reac.REAL = param.REAL
+        par_reac.K = param.K
+        par_reac.kappa = param.kappa
+        par_reac.eps = param.eps
+        par_reac.NCRIT = param.NCRIT
+        par_reac.threshold = 0.05 
+        par_reac.P = 7
+        par_reac.theta = 0.0
+        par_reac.Nm= (par_reac.P+1)*(par_reac.P+2)*(par_reac.P+3)/6
+        par_reac.Nk = 13
 
-    ### Solve
-    print 'Solve'
-    phi = numpy.zeros(param.Neq)
-    phi = gmres_solver(surf_array, field_array, phi, F, param, ind0, timing, kernel) 
-    toc = time.time()
-    solve_time = toc-tic
-    print 'Solve time        : %fs'%solve_time
+        ind_reac = index_constant()
+        computeIndices(par_reac.P, ind_reac)
+        precomputeTerms(par_reac.P, ind_reac)
+
+
+        while dipole_diff>1e-10:
+            iteration += 1
+            print '\nSelf-consistent iteration %i'%iteration
+            print 'Generate RHS'
+            tic = time.time()
+            F = generateRHS(field_array, surf_array, param, kernel, timing, ind0)
+            toc = time.time()
+            rhs_time += toc-tic
+
+            ### Solve
+            tic = time.time()
+            print 'Solve'
+            phi = gmres_solver(surf_array, field_array, phi, F, param, ind0, timing, kernel) 
+            toc = time.time()
+            solve_time += toc-tic
+
+            # Put result phi in corresponding surfaces
+            fill_phi(phi, surf_array)
+    
+            # Compute induced dipole in dissolved state
+            dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, kernel)
+
+            dipole_diff_arr = []
+            i_region = -1
+            for f in field_array:
+                if len(f.xq)>0:
+                    i_region += 1
+                    dipole_diff_arr.append(numpy.sqrt(numpy.sum((numpy.linalg.norm(p_pol_prev[i_region]-f.p_pol,axis=1))**2)/len(f.p_pol)))
+                    p_pol_prev[i_region][:,:] = f.p_pol[:,:]
+
+            dipole_diff = max(dipole_diff_arr)
+            
+
+        print 'Took %i iterations for induced dipole in dissolved state to converge'%iteration
+        print 'RHS generation time: %fs'%rhs_time
+        print 'Solve time         : %fs'%solve_time
+
+    else:
+        ### Generate RHS
+        print 'Generate RHS'
+        tic = time.time()
+        if param.GPU==0:
+            F = generateRHS(field_array, surf_array, param, kernel, timing, ind0)
+        elif param.GPU==1:
+            F = generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0)
+        toc = time.time()
+        rhs_time = toc-tic
+
+    #    numpy.savetxt(os.path.join(output_dir,'RHS.txt'),F)
+
+        setup_time = toc-TIC
+        print 'List time          : %fs'%list_time
+        print 'Data transfer time : %fs'%transfer_time
+        print 'RHS generation time: %fs'%rhs_time
+        print '------------------------------'
+        print 'Total setup time   : %fs\n'%setup_time
+
+        tic = time.time()
+
+        ### Solve
+        print 'Solve'
+        phi = numpy.zeros(param.Neq)
+        phi = gmres_solver(surf_array, field_array, phi, F, param, ind0, timing, kernel) 
+        toc = time.time()
+        solve_time = toc-tic
+        print 'Solve time        : %fs'%solve_time
+
+        # Put result phi in corresponding surfaces
+        fill_phi(phi, surf_array)
+
     phifname = '{:%Y-%m-%d-%H%M%S}-phi.txt'.format(datetime.now())
     numpy.savetxt(os.path.join(output_dir, phifname),phi)
 #    phi = numpy.loadtxt('phi.txt')
-
-    # Put result phi in corresponding surfaces
-    fill_phi(phi, surf_array)
 
     ### Calculate solvation energy
     print '\nCalculate Esolv'
@@ -332,8 +409,6 @@ def main(log_output=True):
         i += 1
         if f.coulomb == 1:
             if param.args.polarizable:
-                print 'Note: if multipoles are polarizables, coulomb energy'
-                print '      calculation has polarization energy substracted out'
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
                 E_coul.append(coulombEnergy(f, param))
 
@@ -353,9 +428,19 @@ def main(log_output=True):
     ### Output summary
     print '\n--------------------------------'
     print 'Totals:'
-    print 'Esolv = %f kcal/mol'%sum(E_solv)
-    print 'Esurf = %f kcal/mol'%sum(E_surf)
-    print 'Ecoul = %f kcal/mol'%sum(E_coul)
+    if param.args.polarizable:
+        print 'Note: if multipoles are polarizables, energy calculations'
+        print '      have the polarization energy substracted out'
+        print 'Esolv                  = %f kcal/mol'%sum(E_solv)
+        print 'Ecoul_diss             = %f kcal/mol'%sum(E_coul)
+        print 'Ecoul_vac              = %f kcal/mol'%sum(E_coul_vac)
+        print '----------------------------------------------'
+        print 'Total solvation energy = %f kcal/mol'%(sum(E_solv)+sum(E_coul)-sum(E_coul_vac))
+        print 'Esurf      = %f kcal/mol'%sum(E_surf)
+    else:
+        print 'Esolv = %f kcal/mol'%sum(E_solv)
+        print 'Ecoul = %f kcal/mol'%sum(E_coul)
+        print 'Esurf = %f kcal/mol'%sum(E_surf)
     print '\nTime = %f s'%(toc-TIC)
 
     # Analytic solution

@@ -224,8 +224,9 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
 
                         if par_reac.args.polarizable: # if polarizable multipoles
                             if len(field_array[j].p)>0:                        # Dipole component
+                                p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
                                 aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
-                                aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+                                aux += numpy.dot(p_tot, aux1)/(field_array[j].E)
 
                             if len(field_array[j].Q)>0:                        # Quadrupole component
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
@@ -279,8 +280,9 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
 
                         if param.args.polarizable: # if polarizable multipoles
                             if len(field_array[j].p)>0:                        # Dipole component
+                                p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
                                 aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
-                                aux += numpy.dot(field_array[j].p[i], aux1)/(field_array[j].E)
+                                aux += numpy.dot(p_tot, aux1)/(field_array[j].E)
 
                             if len(field_array[j].Q)>0:                        # Quadrupole component
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
@@ -873,6 +875,106 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
     return E_solv      
 
+def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, kernel):
+    """
+    Computes the polarizable (induced) dipole in dissolved state. The
+    dipole is induced by the coulomb and solvent reaction fields on the
+    multipole site.
+    Inputs:
+    ------
+    surf_array : array of classes with surfaces.
+    field_array: array of classes with dielectric regions.
+    par_reac   : class, parameters relevant to the simulation.
+                 These are specific to reaction field calculation
+                 as it requires finer parameters.
+    ind_reac   : class, contains precomputed indices useful for 
+                 treecode calculation
+    kernel     : pycuda source module.
+
+    Returns:
+    -------
+           None: modifies the member p_pol of each class in the field_array
+                 array that contains a region with multipoles.
+    """
+    REAL = par_reac.REAL
+
+    for f in field_array:
+        if len(f.q)>0:
+
+            px_pol = numpy.zeros(len(f.xq))
+            py_pol = numpy.zeros(len(f.xq))
+            pz_pol = numpy.zeros(len(f.xq))
+
+            parent_type = surf_array[f.parent[0]].surf_type
+            if parent_type != 'dirichlet_surface' and parent_type != 'neumann_surface':
+
+                AI_int = 0
+                Naux = 0
+
+                dphix_reac = numpy.zeros(len(f.p))
+                dphiy_reac = numpy.zeros(len(f.p))
+                dphiz_reac = numpy.zeros(len(f.p))
+
+#               First look at CHILD surfaces
+#               Need to account for normals pointing outwards
+#               and E_hat coefficient (as region is outside and 
+#               dphi_dn is defined inside)
+                for i in f.child:
+                    s = surf_array[i]
+                    s.xk,s.wk = GQ_1D(par_reac.Nk)
+                    s.xk = REAL(s.xk)
+                    s.wk = REAL(s.wk)
+
+                    Naux += len(s.triangle)
+
+#                   Coefficient to account for dphi_dn defined in
+#                   interior but calculation done in exterior
+                    C1 = s.E_hat
+
+                    dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                            
+                    AI_int += AI
+                    phi_reac -= phi_aux # Minus sign to account for normal pointing out
+
+                    dphix_reac -= dphix_aux
+                    dphiy_reac -= dphiy_aux
+                    dphiz_reac -= dphiz_aux
+
+#               Now look at PARENT surface
+                if len(f.parent)>0:
+                    i = f.parent[0]
+                    s = surf_array[i]
+                    s.xk,s.wk = GQ_1D(par_reac.Nk)
+                    s.xk = REAL(s.xk)
+                    s.wk = REAL(s.wk)
+
+                    Naux += len(s.triangle)
+
+                    dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                    
+                    AI_int += AI
+
+                    dphix_reac += dphix_aux
+                    dphiy_reac += dphiy_aux
+                    dphiz_reac += dphiz_aux
+
+                # Computes the coulomb electric field and the induced dipole
+                # (induced by both the coulomb and reaction fields)
+                compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
+                                       f.p[:,0], f.p[:,1], f.p[:,2],
+                                       px_pol, py_pol, pz_pol,
+                                       f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
+                                       f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
+                                       f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2],
+                                       f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
+                                       f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
+                                       f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
+                                       dphix_reac, dphiy_reac, dphiz_reac, f.E)
+
+                f.p_pol[:,0] = px_pol 
+                f.p_pol[:,1] = py_pol 
+                f.p_pol[:,2] = pz_pol 
+
 
 def coulombEnergy(f, param):
 
@@ -913,12 +1015,17 @@ def coulomb_polarizable_dipole(f, param):
     py_pol = numpy.zeros(len(f.xq))
     pz_pol = numpy.zeros(len(f.xq))
 
+    # dummy phi_reac. This is a vacuum calculation
+    # then there is no solvent reaction
+    dphix_reac = numpy.zeros(len(f.xq))
+    dphiy_reac = numpy.zeros(len(f.xq))
+    dphiz_reac = numpy.zeros(len(f.xq))
+
     while dipole_diff>1e-10:
         iteration += 1
         
         p_tot = f.p + f.p_pol
 
-        Efield = numpy.zeros((len(f.xq),3))
         compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
                                f.p[:,0], f.p[:,1], f.p[:,2],
                                px_pol, py_pol, pz_pol,
@@ -927,7 +1034,8 @@ def coulomb_polarizable_dipole(f, param):
                                f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2],
                                f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
                                f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
-                               f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2], f.E)
+                               f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
+                               dphix_reac, dphiy_reac, dphiz_reac, f.E)
 
         f.p_pol[:,0] = px_pol 
         f.p_pol[:,1] = py_pol 

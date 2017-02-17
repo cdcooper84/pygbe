@@ -521,17 +521,18 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
     print 'Took %i iterations for vacuum induced dipole to converge'%iteration
     return p_pol, Efield
 
-def coulomb_energy_multipole(q, p, Q, xq, E):
+def coulomb_energy_multipole(q, p, Q, p_perm, xq, E):
     """
     Computes the Coulomb energy from a collection of point
     multipoles, according to equation 38 of amoeba bem document.
     
     Inputs:
     ------ 
-        q: array size N with charges of multipoles
-        p: array size (Nx3) with dipoles of multipoles
-        Q: array size (Nx3x3) with quadrupoles of multipoles
+        q : array size N with charges of multipoles
+        p : array size (Nx3) with dipoles of multipoles
+        Q : array size (Nx3x3) with quadrupoles of multipoles
         xq: array size Nx3 with positions of multipoles
+    p_perm: array size (Nx3) with permanent dipoles of multipoles
         E : float, dielectric constant
     Outputs:
     -------
@@ -547,7 +548,7 @@ def coulomb_energy_multipole(q, p, Q, xq, E):
     ddphi = coulomb_ddpotential(q, p, Q, xq, E)
 
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
-    E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/6)
+    E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p_perm*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/6)
 
     return E_coul 
 
@@ -616,17 +617,19 @@ def solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
             an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
     p_diss_tot = p + p_pol_diss
-    coulomb_dissolved = coulomb_energy_multipole(q, p_diss_tot, Q, xq, E_1)
+    coulomb_dissolved = coulomb_energy_multipole(q, p_diss_tot, Q, p, xq, E_1)
 
     p_pol_vac, Epol_vac = coulomb_polarizable_dipole(q, p, Q, alpha, xq, E_1)
     p_vac_tot = p + p_pol_vac
-    coulomb_vacuum = coulomb_energy_multipole(q, p_vac_tot, Q, xq, E_1)
+    coulomb_vacuum = coulomb_energy_multipole(q, p_vac_tot, Q, p, xq, E_1)
 
     pol_energy = polarization_energy(p_pol_diss, p_pol_vac, Epol_diss, Epol_vac)
     
-    solvation_energy = solvent_contribution + coulomb_dissolved - coulomb_vacuum + pol_energy
+    solvation_energy = solvent_contribution + coulomb_dissolved - coulomb_vacuum 
+    print 'Note: energies have the polarization energy already substracted out'
     print 'solvent: %f\ncoulomb diss: %f\ncoulomb vac: %f\npolarization: %f'%(solvent_contribution,\
                                                         coulomb_dissolved, coulomb_vacuum, pol_energy)
+    print 'Total solvation energy: %f'%solvation_energy
 
     return solvation_energy
 
@@ -675,11 +678,12 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     iterations = 0
     while dipole_diff>1e-10:
     
-        coul_field = coulomb_field(q, p_tot, Q, xq, E_1)
-        Epol = coul_field - DPHI
-        for K in range(len(q)):
-            p_pol[K] = dot(alpha[K],Epol[K])
-        
+        if iterations>0:
+            coul_field = coulomb_field(q, p_tot, Q, xq, E_1)
+            Epol = coul_field - DPHI
+            for K in range(len(q)):
+                p_pol[K] = dot(alpha[K],Epol[K])
+
         p_tot = p + p_pol
 
         for K in range(len(q)):
@@ -724,9 +728,9 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
 
-#       print iterations
+    print 'Took %i iterations for the dissolved induced dipole to converge'%iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
-    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p_tot*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
 
     return E_P, Epol, p_pol
 

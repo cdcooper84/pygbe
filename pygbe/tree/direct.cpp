@@ -1315,9 +1315,10 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                         REAL *alphaxx, int alphaxxSize, REAL *alphaxy, int alphaxySize, REAL *alphaxz, int alphaxzSize, 
                         REAL *alphayx, int alphayxSize, REAL *alphayy, int alphayySize, REAL *alphayz, int alphayzSize, 
                         REAL *alphazx, int alphazxSize, REAL *alphazy, int alphazySize, REAL *alphazz, int alphazzSize, 
-                        double E)
+                        REAL *dphix_reac, int dphix_reacSize, REAL *dphiy_reac, int dphiy_reacSize, 
+                        REAL *dphiz_reac, int dphiz_reacSize, double E)
 {
-    double dphi [xtSize][3];
+    double dphi_coul [xtSize][3];
     double px_tot[xtSize], py_tot[xtSize], pz_tot[xtSize];
     
     for (int i=0; i<xtSize; i++)
@@ -1330,14 +1331,22 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
     // Compute derivative of phi (negative of electric field)
     coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
-                           Qzx, Qzy, Qzz, dphi, xtSize);
+                           Qzx, Qzy, Qzz, dphi_coul, xtSize);
 
     // p_pol = -grad(phi)
+    // Note: dphi_reac is a field different from coulomb (reaction field due to solvent)
+    //       if dphi_reac = 0,0,0, then this computes the induced dipole in vacuum.
     for (int i=0; i<xtSize; i++)
     {
-        px_pol[i] = (-alphaxx[i]*dphi[i][0] - alphaxy[i]*dphi[i][1] - alphaxz[i]*dphi[i][2])/(4*M_PI*E);
-        py_pol[i] = (-alphayx[i]*dphi[i][0] - alphayy[i]*dphi[i][1] - alphayz[i]*dphi[i][2])/(4*M_PI*E);
-        pz_pol[i] = (-alphazx[i]*dphi[i][0] - alphazy[i]*dphi[i][1] - alphazz[i]*dphi[i][2])/(4*M_PI*E);
+        px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+                     -alphaxy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+                     -alphaxz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        py_pol[i] = (-alphayx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+                     -alphayy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+                     -alphayz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+                     -alphazy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+                     -alphazz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
     }
     
 }

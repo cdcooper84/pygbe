@@ -78,7 +78,8 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
                         double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
-                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, double E);
+                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
+                        double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %}
 
@@ -149,6 +150,9 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *px_pol, int px_polSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *py_pol, int py_polSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *pz_pol, int pz_polSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *dphix_reac, int dphix_reacSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *dphiy_reac, int dphiy_reacSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *dphiz_reac, int dphiz_reacSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxx, int QxxSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxy, int QxySize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *Qxz, int QxzSize)};
@@ -253,7 +257,8 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
                         double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
-                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, double E);
+                        double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
+                        double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %clear (double *K_aux, int K_auxSize); 
 %clear (double *dKx_aux, int dKx_auxSize); 
@@ -317,6 +322,9 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
 %clear (double *px_pol, int px_polSize); 
 %clear (double *py_pol, int py_polSize); 
 %clear (double *pz_pol, int pz_polSize);
+%clear (double *dphix_reac, int dphix_reacSize); 
+%clear (double *dphiy_reac, int dphiy_reacSize); 
+%clear (double *dphiz_reac, int dphiz_reacSize);
 %clear (double *Qxx, int QxxSize); 
 %clear (double *Qxy, int QxySize); 
 %clear (double *Qxz, int QxzSize);
