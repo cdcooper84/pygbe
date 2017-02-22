@@ -770,7 +770,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 #               interior but calculation done in exterior
                 C1 = s.E_hat
 
-                if param.GPU==0:
+                if param.GPU==0 or (param.GPU==1 and par_reac.args.polarizable):
                     phi_aux, AI = get_phir(s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
 
                     if par_reac.args.polarizable: # if polarizable multipoles
@@ -817,7 +817,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 Naux += len(s.triangle)
 
-                if param.GPU==0:
+                if param.GPU==0 or (param.GPU==1 and par_reac.args.polarizable):
                     phi_aux, AI = get_phir(s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
 
                     if par_reac.args.polarizable: # if polarizable multipoles

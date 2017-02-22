@@ -297,7 +297,7 @@ def main(log_output=True):
         precomputeTerms(par_reac.P, ind_reac)
 
 
-        while dipole_diff>1e-10:
+        while dipole_diff>1e-8:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration
             print 'Generate RHS'
