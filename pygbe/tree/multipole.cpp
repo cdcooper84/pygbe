@@ -1190,3 +1190,83 @@ void multipoleKt_sort(REAL *Ktx_aux , int Ktx_auxSize,
         }
     }
 }
+
+void compute_potential_multipole(REAL *phi, int phiSize,
+                                 REAL *xi , int xiSize, 
+                                 REAL *yi , int yiSize, 
+                                 REAL *zi , int ziSize,
+                                 REAL *xc , int xcSize,
+                                 REAL *yc , int ycSize, 
+                                 REAL *zc , int zcSize,
+                                 REAL *q  , int qSize,
+                                 REAL *px , int pxSize,
+                                 REAL *py , int pySize,
+                                 REAL *pz , int pzSize,
+                                 REAL *Qxx, int QxxSize,
+                                 REAL *Qxy, int QxySize,
+                                 REAL *Qxz, int QxzSize,
+                                 REAL *Qyx, int QyxSize,
+                                 REAL *Qyy, int QyySize,
+                                 REAL *Qyz, int QyzSize,
+                                 REAL *Qzx, int QzxSize,
+                                 REAL *Qzy, int QzySize,
+                                 REAL *Qzz, int QzzSize)
+{
+    // Setting constants (so far, it could be done for general P
+    int P = 2;
+    int Nm = (P+1)*(P+2)*(P+3)/6;
+    int LorY = 1;
+
+    // 3D to 1D map of indices
+    int *index[(P+1)*(P+1)*(P+1)];
+    int counter = 0;
+    for (int i=0; i<P+1; i++)
+    {
+        for (int j=0; j<P+1-i; j++)
+        {
+            for (int k=0; k<P+1-i-j; k++)
+            {
+                index[(P+1)*(P+1)*i+(P+1)*j+k] = counter;   
+                counter += 1;
+            }
+        }        
+    }    
+
+    double *a[Nm];
+    double phi_sum, dx, dy, dz;
+    double p_vec[3], Q_vec[3][3];
+    for (int i=0; i<phiSize; i++)
+    {
+        phi_sum = 0.;   
+    
+        for (int j=0; j<xcSize; j++)
+        {
+            dx = xi[i]-xc[j];           
+            dy = yi[i]-yc[j];           
+            dz = zi[i]-zc[j];           
+
+            getCoeff(a, dx, dy, dz, index, Nm, P, 1e-12, 1);
+
+            // monopole term
+            phi_sum += q[j]*a[index[0]]; 
+            
+            // dipole term
+            phi_sum += px[j]*a[index[(P+2)*(P+2)]]
+                     + py[j]*a[index[(P+2)]]
+                     + pz[j]*a[index[1]];
+            
+            // quadrupole term
+            phi_sum += Qxx[j]*a[index[2*(P+2)*(P+2) + 0*(P+2) + 0]]
+                     + Qxy[j]*a[index[1*(P+2)*(P+2) + 1*(P+2) + 0]]
+                     + Qxz[j]*a[index[1*(P+2)*(P+2) + 0*(P+2) + 1]]
+                     + Qyx[j]*a[index[1*(P+2)*(P+2) + 1*(P+2) + 0]]
+                     + Qyy[j]*a[index[0*(P+2)*(P+2) + 2*(P+2) + 0]]
+                     + Qyz[j]*a[index[0*(P+2)*(P+2) + 1*(P+2) + 1]]
+                     + Qzx[j]*a[index[1*(P+2)*(P+2) + 0*(P+2) + 1]]
+                     + Qzy[j]*a[index[0*(P+2)*(P+2) + 1*(P+2) + 1]]
+                     + Qzz[j]*a[index[0*(P+2)*(P+2) + 0*(P+2) + 2]];
+        }
+        
+        phi[i] += phi_sum;
+    }
+}

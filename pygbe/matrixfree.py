@@ -220,9 +220,9 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                                     + dy_pq*surf_array[s].normal[:,1] \
                                                                     + dz_pq*surf_array[s].normal[:,2])
                     else:
-                        aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
-                        if par_reac.args.polarizable: # if polarizable multipoles
+                        if param.args.polarizable: # if polarizable multipoles
+                            aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
                             if len(field_array[j].p)>0:                        # Dipole component
                                 p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
                                 aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
@@ -233,6 +233,8 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
                                 aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                        else:
+                            aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
 #               For CHILD surfaces, q contributes to RHS in 
 #               EXTERIOR equation (hence Precond[1,:] and [3,:])
@@ -275,10 +277,9 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                                     + dy_pq*surf_array[s].normal[:,1] \
                                                                     + dz_pq*surf_array[s].normal[:,2])
                     else:
-                        aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
-
 
                         if param.args.polarizable: # if polarizable multipoles
+                            aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
                             if len(field_array[j].p)>0:                        # Dipole component
                                 p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
                                 aux1 = numpy.array([dx_pq, dy_pq, dz_pq])/(R_pq*R_pq*R_pq) 
@@ -289,6 +290,8 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
                                 aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                        else:
+                            aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
 #               No preconditioner
 #                F[s_start:s_start+s_size] += aux
