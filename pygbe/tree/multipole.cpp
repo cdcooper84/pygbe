@@ -1191,7 +1191,7 @@ void multipoleKt_sort(REAL *Ktx_aux , int Ktx_auxSize,
     }
 }
 
-void compute_potential_multipole(REAL *phi, int phiSize,
+void compute_potential_multipole(REAL *V  , int VSize,
                                  REAL *xi , int xiSize, 
                                  REAL *yi , int yiSize, 
                                  REAL *zi , int ziSize,
@@ -1218,7 +1218,7 @@ void compute_potential_multipole(REAL *phi, int phiSize,
     int LorY = 1;
 
     // 3D to 1D map of indices
-    int *index[(P+1)*(P+1)*(P+1)];
+    int index[(P+1)*(P+1)*(P+1)];
     int counter = 0;
     for (int i=0; i<P+1; i++)
     {
@@ -1232,12 +1232,12 @@ void compute_potential_multipole(REAL *phi, int phiSize,
         }        
     }    
 
-    double *a[Nm];
-    double phi_sum, dx, dy, dz;
+    double a[Nm];
+    double V_sum, dx, dy, dz;
     double p_vec[3], Q_vec[3][3];
-    for (int i=0; i<phiSize; i++)
+    for (int i=0; i<VSize; i++)
     {
-        phi_sum = 0.;   
+        V_sum = 0.;   
     
         for (int j=0; j<xcSize; j++)
         {
@@ -1248,25 +1248,31 @@ void compute_potential_multipole(REAL *phi, int phiSize,
             getCoeff(a, dx, dy, dz, index, Nm, P, 1e-12, 1);
 
             // monopole term
-            phi_sum += q[j]*a[index[0]]; 
+            V_sum += q[j]*a[index[0]]; 
             
             // dipole term
-            phi_sum += px[j]*a[index[(P+2)*(P+2)]]
-                     + py[j]*a[index[(P+2)]]
+            V_sum -= px[j]*a[index[(P+1)*(P+1)]]
+                     + py[j]*a[index[(P+1)]]
                      + pz[j]*a[index[1]];
+            // minus sign because it is the negative of the
+            // derivative what we actually need
             
             // quadrupole term
-            phi_sum += Qxx[j]*a[index[2*(P+2)*(P+2) + 0*(P+2) + 0]]
-                     + Qxy[j]*a[index[1*(P+2)*(P+2) + 1*(P+2) + 0]]
-                     + Qxz[j]*a[index[1*(P+2)*(P+2) + 0*(P+2) + 1]]
-                     + Qyx[j]*a[index[1*(P+2)*(P+2) + 1*(P+2) + 0]]
-                     + Qyy[j]*a[index[0*(P+2)*(P+2) + 2*(P+2) + 0]]
-                     + Qyz[j]*a[index[0*(P+2)*(P+2) + 1*(P+2) + 1]]
-                     + Qzx[j]*a[index[1*(P+2)*(P+2) + 0*(P+2) + 1]]
-                     + Qzy[j]*a[index[0*(P+2)*(P+2) + 1*(P+2) + 1]]
-                     + Qzz[j]*a[index[0*(P+2)*(P+2) + 0*(P+2) + 2]];
+            V_sum += (Qxx[j]*a[index[2*(P+1)*(P+1) + 0*(P+1) + 0]]
+                     + Qxy[j]*a[index[1*(P+1)*(P+1) + 1*(P+1) + 0]]
+                     + Qxz[j]*a[index[1*(P+1)*(P+1) + 0*(P+1) + 1]]
+                     + Qyx[j]*a[index[1*(P+1)*(P+1) + 1*(P+1) + 0]]
+                     + Qyy[j]*a[index[0*(P+1)*(P+1) + 2*(P+1) + 0]]
+                     + Qyz[j]*a[index[0*(P+1)*(P+1) + 1*(P+1) + 1]]
+                     + Qzx[j]*a[index[1*(P+1)*(P+1) + 0*(P+1) + 1]]
+                     + Qzy[j]*a[index[0*(P+1)*(P+1) + 1*(P+1) + 1]]
+                     + Qzz[j]*a[index[0*(P+1)*(P+1) + 0*(P+1) + 2]])/3;
+                    //  Divided by 3 because traceless quadrupole absorbs
+                    //  the 3 from the derivatives. No need to account
+                    //  for the "delta_ij" in derivatives because the
+                    //  traceless quadrupole adds them up to 0
         }
         
-        phi[i] += phi_sum;
+        V[i] += V_sum;
     }
 }

@@ -47,6 +47,26 @@ extern void getIndex_arr(int P, int N,
                         int * jj    , int jjSize,
                         int * kk    , int kkSize);
 extern int setIndex(int P, int i, int j, int k);
+extern void compute_potential_multipole(double *V, int VSize,
+                                 double *xi , int xiSize, 
+                                 double *yi , int yiSize, 
+                                 double *zi , int ziSize,
+                                 double *xc , int xcSize,
+                                 double *yc , int ycSize, 
+                                 double *zc , int zcSize,
+                                 double *q  , int qSize,
+                                 double *px , int pxSize,
+                                 double *py , int pySize,
+                                 double *pz , int pzSize,
+                                 double *Qxx, int QxxSize,
+                                 double *Qxy, int QxySize,
+                                 double *Qxz, int QxzSize,
+                                 double *Qyx, int QyxSize,
+                                 double *Qyy, int QyySize,
+                                 double *Qyz, int QyzSize,
+                                 double *Qzx, int QzxSize,
+                                 double *Qzy, int QzySize,
+                                 double *Qzz, int QzzSize);
 %}
 
 %include "numpy.i"
@@ -78,6 +98,19 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *xc, int xcSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *yc, int ycSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *zc, int zcSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *q, int qSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *px, int pxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *py, int pySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *pz, int pzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qxx, int QxxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qxy, int QxySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qxz, int QxzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qyx, int QyxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qyy, int QyySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qyz, int QyzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qzx, int QzxSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qzy, int QzySize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *Qzz, int QzzSize)};
 extern void multipole_c(double *K, int KSize,
                         double *V, int VSize,
                           double *M, int MSize,
@@ -123,6 +156,26 @@ extern void getIndex_arr(int P, int N,
                         int * jj    , int jjSize,
                         int * kk    , int kkSize);
 extern int setIndex(int P, int i, int j, int k);
+extern void compute_potential_multipole(double *V, int VSize,
+                                 double *xi , int xiSize, 
+                                 double *yi , int yiSize, 
+                                 double *zi , int ziSize,
+                                 double *xc , int xcSize,
+                                 double *yc , int ycSize, 
+                                 double *zc , int zcSize,
+                                 double *q  , int qSize,
+                                 double *px , int pxSize,
+                                 double *py , int pySize,
+                                 double *pz , int pzSize,
+                                 double *Qxx, int QxxSize,
+                                 double *Qxy, int QxySize,
+                                 double *Qxz, int QxzSize,
+                                 double *Qyx, int QyxSize,
+                                 double *Qyy, int QyySize,
+                                 double *Qyz, int QyzSize,
+                                 double *Qzx, int QzxSize,
+                                 double *Qzy, int QzySize,
+                                 double *Qzz, int QzzSize);
 %clear (double *K, int KSize);
 %clear (double *Ktx, int KtxSize);
 %clear (double *Kty, int KtySize);
@@ -139,6 +192,19 @@ extern int setIndex(int P, int i, int j, int k);
 %clear (double *xc, int xcSize);
 %clear (double *yc, int ycSize);
 %clear (double *zc, int zcSize);
+%clear (double *q, int qSize);
+%clear (double *px, int pxSize);
+%clear (double *py, int pySize);
+%clear (double *pz, int pzSize);
+%clear (double *Qxx, int QxxSize);
+%clear (double *Qxy, int QxySize);
+%clear (double *Qxz, int QxzSize);
+%clear (double *Qyx, int QyxSize);
+%clear (double *Qyy, int QyySize);
+%clear (double *Qyz, int QyzSize);
+%clear (double *Qzx, int QzxSize);
+%clear (double *Qzy, int QzySize);
+%clear (double *Qzz, int QzzSize);
 %clear (double *indices, int indicesSize);
 %clear (int *offTar, int offTarSize);
 %clear (int *sizeTar, int sizeTarSize);

@@ -24,6 +24,7 @@ import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
 from tree.direct import coulomb_direct, coulomb_energy_multipole, compute_induced_dipole
+from tree.multipole import compute_potential_multipole
 from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_d2phirdr2
 from classes import parameters, index_constant
 import time
@@ -209,6 +210,17 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                 s_size = len(surf_array[s].xi)
 
                 aux = numpy.zeros(len(surf_array[s].xi))
+                
+                if param.args.polarizable: # if polarizable multipoles
+                    p_tot = field_array[j].p + field_array[j].p_pol
+                    compute_potential_multipole(aux, surf_array[s].xi, surf_array[s].yi, surf_array[s].zi,
+                                                field_array[j].xq[:,0], field_array[j].xq[:,1], field_array[j].xq[:,2],
+                                                field_array[j].q, p_tot[:,0], p_tot[:,1], p_tot[:,2], 
+                                                field_array[j].Q[:,0,0], field_array[j].Q[:,0,1], field_array[j].Q[:,0,2],
+                                                field_array[j].Q[:,1,0], field_array[j].Q[:,1,1], field_array[j].Q[:,1,2],
+                                                field_array[j].Q[:,2,0], field_array[j].Q[:,2,1], field_array[j].Q[:,2,2])
+                    # with recurrence relations
+               
                 for i in range(Nq):
                     dx_pq = surf_array[s].xi - field_array[j].xq[i,0] 
                     dy_pq = surf_array[s].yi - field_array[j].xq[i,1]
@@ -222,6 +234,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                     else:
 
                         if param.args.polarizable: # if polarizable multipoles
+                            '''
                             aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
                             if len(field_array[j].p)>0:                        # Dipole component
                                 p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
@@ -233,6 +246,8 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
                                 aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                            '''
+                            pass 
                         else:
                             aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
@@ -266,6 +281,18 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                 s_size = len(surf_array[s].xi)
 
                 aux = numpy.zeros(len(surf_array[s].xi))
+                
+                if param.args.polarizable: # if polarizable multipoles
+                    p_tot = field_array[j].p + field_array[j].p_pol
+                    compute_potential_multipole(aux, surf_array[s].xi, surf_array[s].yi, surf_array[s].zi,
+                                                field_array[j].xq[:,0], field_array[j].xq[:,1], field_array[j].xq[:,2],
+                                                field_array[j].q, p_tot[:,0], p_tot[:,1], p_tot[:,2], 
+                                                field_array[j].Q[:,0,0], field_array[j].Q[:,0,1], field_array[j].Q[:,0,2],
+                                                field_array[j].Q[:,1,0], field_array[j].Q[:,1,1], field_array[j].Q[:,1,2],
+                                                field_array[j].Q[:,2,0], field_array[j].Q[:,2,1], field_array[j].Q[:,2,2])
+                    aux /= field_array[j].E
+                    # with recurrence relations
+
                 for i in range(Nq):
                     dx_pq = surf_array[s].xi - field_array[j].xq[i,0] 
                     dy_pq = surf_array[s].yi - field_array[j].xq[i,1]
@@ -279,6 +306,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                     else:
 
                         if param.args.polarizable: # if polarizable multipoles
+                            '''
                             aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
                             if len(field_array[j].p)>0:                        # Dipole component
                                 p_tot = field_array[j].p[i] + field_array[j].p_pol[i]
@@ -290,10 +318,12 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
                                 aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                            '''
+                            pass
                         else:
                             aux += field_array[j].q[i]/(field_array[j].E*R_pq) # Point charge
 
-#               No preconditioner
+
 #                F[s_start:s_start+s_size] += aux
 #               With preconditioner
                 if surf_array[s].surf_type=='asc_surface':
