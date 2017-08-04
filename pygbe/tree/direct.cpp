@@ -1158,7 +1158,9 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
 
     for (int i=0; i<N; i++)
     {
-        sum = {0.0, 0.0, 0.0};
+        sum[0] =  0.0;
+        sum[1] =  0.0;
+        sum[2] =  0.0;
         for (int j=0; j<N; j++)
         {
             Ri[0] = xt[i] - xt[j]; 
@@ -1209,7 +1211,15 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
 
     for (int i=0; i<N; i++)
     {
-        sum = {{0.0}};
+        sum[0][0] = 0.0;
+        sum[0][1] = 0.0;
+        sum[0][2] = 0.0;
+        sum[1][0] = 0.0;
+        sum[1][1] = 0.0;
+        sum[1][2] = 0.0;
+        sum[2][0] = 0.0;
+        sum[2][1] = 0.0;
+        sum[2][2] = 0.0;
         for (int j=0; j<N; j++)
         {
             Ri[0] = xt[i] - xt[j]; 
