@@ -28,7 +28,7 @@ from tree.direct import computeDiagonal
 from util.semi_analytical import GQ_1D
 #from util.triangulation      import *
 from util.readData import (readVertex, readTriangle, readpqr, readcrd,
-                           readFields, readSurf)
+                           readFields, readSurf, read_tinker)
 
 # PyCUDA libraries
 try:
@@ -848,17 +848,22 @@ def initializeField(filename, param):
 
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
-            if qfile[i][-4:]=='.crd':
-                xq,q,Nq = readcrd(qfile[i], param.REAL)             # read charges
-                print '\nReading crd for region %i from '%i+qfile[i]
-            if qfile[i][-4:]=='.pqr':
-                xq,q,p,Q,alpha,Nq = readpqr(qfile[i], param.REAL)   # read charges
-                print '\nReading pqr for region %i from '%i+qfile[i]
+            if param.args.polarizable:
+                xq,q,p,Q,alpha,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+                print '\nReading tinker files for region %i from '%i+qfile[i]
+            else:
+                if qfile[i][-4:]=='.crd':
+                    xq,q,Nq = readcrd(qfile[i], param.REAL)             # read charges
+                    print '\nReading crd for region %i from '%i+qfile[i]
+                if qfile[i][-4:]=='.pqr':
+                    xq,q,p,Q,alpha,Nq = readpqr(qfile[i], param.REAL)   # read charges
+                    print '\nReading pqr for region %i from '%i+qfile[i]
             field_aux.xq = xq                                       # charges positions
             field_aux.q = q                                         # charges values
             field_aux.p = p                                         # dipole values
             field_aux.Q = Q                                         # quadrupole values
             field_aux.alpha = alpha                                 # polarizabilities
+
         if int(Nparent[i])==1:                                      # if it is an enclosed region
             field_aux.parent.append(int(parent[i]))                 # pointer to parent surface (enclosing surface)
         if int(Nchild[i])>0:                                        # if there are enclosed regions inside

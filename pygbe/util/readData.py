@@ -100,6 +100,95 @@ def readCheck(aux, REAL):
 
     return X
 
+def read_tinker(filename, REAL):
+    """
+    Reads input file from tinker
+    Input:
+    -----
+    filename: (string) file name without xyz or key extension
+    REAL    : (string) precision, double or float
+
+    Returns:
+    -------
+    pos: Nx3 array with position of multipoles
+    q  : array size N with charges (monopoles)
+    p  : array size Nx3 with dipoles
+    Q  : array size Nx3x3 with quadrupoles
+    alpha: array size Nx3x3 with polarizabilities
+            (tinker considers an isotropic value, not tensor)
+    N  : (int) number of multipoles
+    """
+
+    file_xyz = filename+'.xyz'
+    file_key = filename+'.key'
+
+    with open(file_xyz, 'r') as f:
+        N = int(f.readline().split()[0])
+
+    pos   = numpy.zeros((N,3))
+    q     = numpy.zeros(N)
+    p     = numpy.zeros((N,3))
+    Q     = numpy.zeros((N,3,3))
+    alpha = numpy.zeros((N,3,3))
+    atom_type  = numpy.chararray(N, itemsize=10)
+    for line in file(file_xyz):
+        line = line.split()
+
+        if len(line)>2:
+            atom_number = int(line[0])-1
+            pos[atom_number,0] = REAL(line[2])
+            pos[atom_number,1] = REAL(line[3])
+            pos[atom_number,2] = REAL(line[4])
+            atom_type[atom_number] = line[5]
+
+    atom_class = {}
+    polarizability = {}
+    charge = {}
+    dipole = {}
+    quadrupole = {}
+    multipole_flag = 0
+
+    for line in file(file_key):
+        line = line.split()
+
+        if len(line)>0:
+            if line[0].lower()=='atom':
+                atom_class[line[1]] = line[2]
+
+            if line[0].lower()=='polarize':
+                polarizability[line[1]] = REAL(line[2])
+
+            if line[0].lower()=='multipole' or (multipole_flag>0 and multipole_flag<5):
+
+                if multipole_flag == 0:
+                    key = line[1]
+                    charge[key] = REAL(line[-1])
+                if multipole_flag == 1:
+                    dipole[key] = numpy.array([REAL(line[0]), REAL(line[1]), REAL(line[2])]) 
+                if multipole_flag == 2:
+                    quadrupole[key] = numpy.zeros((3,3))
+                    quadrupole[key][0,0] = REAL(line[0])
+                if multipole_flag == 3:
+                    quadrupole[key][1,0] = REAL(line[0])
+                    quadrupole[key][0,1] = REAL(line[0])
+                    quadrupole[key][1,1] = REAL(line[1])
+                if multipole_flag == 4:
+                    quadrupole[key][2,0] = REAL(line[0])
+                    quadrupole[key][0,2] = REAL(line[0])
+                    quadrupole[key][2,1] = REAL(line[1])
+                    quadrupole[key][1,2] = REAL(line[1])
+                    quadrupole[key][2,2] = REAL(line[2])
+                    multipole_flag = -1            
+
+                multipole_flag += 1
+                
+    for i in range(N):
+        q[i] = charge[atom_type[i]]
+        p[i,:] = dipole[atom_type[i]]
+        Q[i,:,:] = quadrupole[atom_type[i]]
+        alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+        
+    return pos, q, p, Q, alpha, N
 
 def readpqr(filename, REAL):
 
