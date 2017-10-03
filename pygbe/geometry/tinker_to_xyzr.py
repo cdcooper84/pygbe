@@ -45,18 +45,27 @@ r = numpy.zeros(N)
 atom_type  = numpy.chararray(N, itemsize=10)
 
 i = 0
+header = 0
 for line in file(file_xyz):
     line = line.split()
 
-    if len(line)>2:
+    if header==1:
         x[i] = numpy.float64(line[2])
         y[i] = numpy.float64(line[3])
         z[i] = numpy.float64(line[4])
         atom_type[i] = line[5]
         i+=1
 
+    header = 1
+
 atom_class = {}
 vdw_radii = {}
+
+with open(file_key, 'r') as f:
+    line = f.readline().split()
+    if line[0]=='parameters':
+        file_key = line[1]
+    print ('Reading parameters from '+file_key)
 
 for line in file(file_key):
     line = line.split()

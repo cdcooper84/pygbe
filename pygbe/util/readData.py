@@ -131,15 +131,18 @@ def read_tinker(filename, REAL):
     Q     = numpy.zeros((N,3,3))
     alpha = numpy.zeros((N,3,3))
     atom_type  = numpy.chararray(N, itemsize=10)
+    header = 0
     for line in file(file_xyz):
         line = line.split()
 
-        if len(line)>2:
+        if header==1:
             atom_number = int(line[0])-1
             pos[atom_number,0] = REAL(line[2])
             pos[atom_number,1] = REAL(line[3])
             pos[atom_number,2] = REAL(line[4])
             atom_type[atom_number] = line[5]
+
+        header = 1
 
     atom_class = {}
     polarizability = {}
@@ -147,6 +150,12 @@ def read_tinker(filename, REAL):
     dipole = {}
     quadrupole = {}
     multipole_flag = 0
+
+    with open(file_key, 'r') as f:
+        line = f.readline().split()
+        if line[0]=='parameters':
+            file_key = line[1]
+        print ('Reading parameters from '+file_key)
 
     for line in file(file_key):
         line = line.split()

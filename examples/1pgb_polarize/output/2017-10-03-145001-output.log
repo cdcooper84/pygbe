@@ -1,0 +1,173 @@
+Run started on:
+	Date: 2017/10/3
+	Time: 14:50:1
+Reading parameters from /home/chris/Software/MolecularTools/tinker/params/amoebapro13.prm
+
+Reading tinker files for region 1 from /home/chris/git_repo/pygbe_cdcooper/examples/1pgb_polarize//1pgb
+
+Reading surface 0 from file 1pgb_d01
+Time load mesh: 0.067055
+Removed areas=0: 0
+
+Total elements : 8220
+Total equations: 16440
+----------------------------
+1 surfaces:
+
+Surface 0:
+	8220 elements
+	Surface type       : dielectric_interface
+	Cells              : 51
+	Twigs              : 42
+	Levels             : 3
+	C0 size            : 21.904964
+	C0 box center      : 8.749565, 12.967401, 17.755049
+	Twig cell size     : 5.476241
+	Rbox/theta         : 10.952482
+	Analytic distance  : 1.792660
+	Elem. per sq Ang   : 2.206943
+	Max, min, avg elem.: 1.57896090592, 2.61963737948e-05, 0.453115503983
+	Total area         : 3724.609443
+----------------------------
+
+2 regions:
+
+Region 0:
+	Laplace or Yukawa: 2
+	kappa            : 0.125
+	dielectric const : 80.0
+	Number of charges: 0
+	Parent surface   : []
+	Child surfaces   : [0]
+Region 1:
+	Laplace or Yukawa: 1
+	kappa            : 1e-12
+	dielectric const : 4.0
+	Number of charges: 927
+	Parent surface   : [0]
+	Child surfaces   : []
+----------------------------
+
+Parameters:
+	Data type               : <type 'numpy.float64'>
+	Use GPU                 : 1
+	P                       : 3
+	threshold               : 0.50
+	theta                   : 0.50
+	NCRIT                   : 500
+	CUDA block size         : 128
+	Gauss points per element: 1
+	Gauss points near singlr: 19
+	1D Gauss points per side: 9
+	GMRES tolerance         : 0.0001
+	GMRES max iterations    : 1000
+	GMRES restart iteration : 200
+----------------------------
+
+Generate interaction list
+Transfer data to GPU
+List time          : 0.004828s
+Data transfer time : 0.005398s
+------------------------------
+Total setup time   : 0.494451s
+
+
+Self-consistent iteration 1
+Generate RHS
+Solve
+Analytical integrals: 54 of 8220, 0%
+iteration: 1, rel resid: 0.0715315849628
+iteration: 2, rel resid: 0.0370198464175
+iteration: 3, rel resid: 0.00783809081323
+iteration: 4, rel resid: 0.00422380635594
+iteration: 5, rel resid: 0.00311926817164
+iteration: 6, rel resid: 0.00283685289423
+iteration: 7, rel resid: 0.00185818570681
+iteration: 8, rel resid: 0.0012310438751
+iteration: 9, rel resid: 0.000947167207834
+iteration: 10, rel resid: 0.00082501863933
+iteration: 11, rel resid: 0.000825008274633
+iteration: 12, rel resid: 0.000824969769636
+iteration: 13, rel resid: 0.000794800171664
+iteration: 14, rel resid: 0.000700711611855
+iteration: 15, rel resid: 0.000499713928665
+iteration: 16, rel resid: 0.000245362939272
+iteration: 17, rel resid: 0.00016911574614
+iteration: 18, rel resid: 0.000121939149794
+iteration: 19, rel resid: 8.74393699537e-05
+GMRES solve
+Converged after 19 iterations to a residual of 8.74393699537e-05
+Time weight vector: 0.082073
+Time sort         : 0.010925
+Time data transfer: 0.058889
+Time P2M          : 0.088482
+Time M2M          : 0.007928
+Time M2P          : 0.113338
+Time P2P          : 2.057477
+	Time analy: 0.000000
+[ 0.00017182  0.00019361  0.00020684 ..., -0.0042496  -0.00500154
+ -0.00516126]
+[191 230 267 274 286 292 315 385 481 526 552 554 555 561 569 598 706 712
+ 717 724 733 737 763 804 805 819 823 857 884]
+[[ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]
+ [ nan  nan  nan]]
+Took 1 iterations for induced dipole in dissolved state to converge
+RHS generation time: 1.899137s
+Solve time         : 2.476364s
+
+Calculate Esolv
+Calculating solvation energy for region 1, stored in E_solv[0]
+4157 of 8220 analytical integrals for phi_reac calculation in region 1
+Time Esolv: 12.507783s
+Region 1: Esolv = -349.981291 kcal/mol = -1464.321721 kJ/mol
+
+Calculate Esurf
+Time Esurf: 0.014320s
+
+Calculate Ecoul
+Calculate Coulomb energy in dissolved state for region 1
+Calculate vacuum induced dipole
+1 iterations for vacuum induced dipole to converge
+Calculate Coulomb energy in vacuum for region 1
+Region 1: Ecoul = nan kcal/mol = nan kJ/mol
+Time Ecoul: 2.560657s
+
+--------------------------------
+Totals:
+Note: if multipoles are polarizables, energy calculations
+      have the polarization energy substracted out
+Esolv                  = -349.981291 kcal/mol
+Ecoul_diss             = nan kcal/mol
+Ecoul_vac              = nan kcal/mol
+----------------------------------------------
+Total solvation energy = nan kcal/mol
+Esurf      = 0.000000 kcal/mol
+
+Time = 23.712356 s

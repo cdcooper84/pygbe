@@ -1292,6 +1292,19 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
         px_tot[i] = px[i] + px_pol[i];
         py_tot[i] = py[i] + py_pol[i];
         pz_tot[i] = pz[i] + pz_pol[i];
+        phi[i] = 0.0;
+        dphi[i][0] =  0.0;
+        dphi[i][1] =  0.0;
+        dphi[i][2] =  0.0;
+        ddphi[i][0][0] = 0.0;
+        ddphi[i][0][1] = 0.0;
+        ddphi[i][0][2] = 0.0;
+        ddphi[i][1][0] = 0.0;
+        ddphi[i][1][1] = 0.0;
+        ddphi[i][1][2] = 0.0;
+        ddphi[i][2][0] = 0.0;
+        ddphi[i][2][1] = 0.0;
+        ddphi[i][2][2] = 0.0;
     }
 
     coulomb_phi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
@@ -1336,6 +1349,9 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
         px_tot[i] = px[i] + px_pol[i];
         py_tot[i] = py[i] + py_pol[i];
         pz_tot[i] = pz[i] + pz_pol[i];
+        dphi_coul[i][0] =  0.0;
+        dphi_coul[i][1] =  0.0;
+        dphi_coul[i][2] =  0.0;
     }
 
     // Compute derivative of phi (negative of electric field)
