@@ -442,9 +442,18 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
     REAL = param.REAL
     computeRHS_gpu = kernel.get_function("compute_RHS")
     computeRHSKt_gpu = kernel.get_function("compute_RHSKt")
+    computeRHS_gpu_dipole = kernel.get_function("compute_RHS_dipole")
+    computeRHS_gpu_quadrupole = kernel.get_function("compute_RHS_quadrupole")
     for j in range(len(field_array)):
         Nq = len(field_array[j].q)
         if Nq>0:
+
+            if param.args.polarizable:
+                if len(field_array[j].p)>0:  # Update dipole component on GPU (done every self-iteration)
+                    p_tot = field_array[j].p + field_array[j].p_pol
+                    field_array[j].px_gpu = gpuarray.to_gpu(p_tot[:,0].astype(REAL))
+                    field_array[j].py_gpu = gpuarray.to_gpu(p_tot[:,1].astype(REAL))
+                    field_array[j].pz_gpu = gpuarray.to_gpu(p_tot[:,2].astype(REAL))
         
 #           First for CHILD surfaces
             for s in field_array[j].child[:]:       # Loop over surfaces
@@ -469,6 +478,33 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
 
                     aux = numpy.zeros(Nround)
                     F_gpu.get(aux)
+
+                    if param.args.polarizable:
+                        if len(field_array[j].p)>0:                        # Dipole component
+                            F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
+                            
+                            computeRHS_gpu_dipole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
+                                        field_array[j].px_gpu, field_array[j].py_gpu, field_array[j].pz_gpu,
+                                        surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
+                                        REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
+
+                            aux2 = numpy.zeros(Nround)
+                            F_gpu.get(aux2)
+                            aux += aux2
+
+                        if len(field_array[j].Q)>0:                        # quadrupole component
+                            F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
+                            
+                            computeRHS_gpu_quadrupole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
+                                        field_array[j].Qxx_gpu, field_array[j].Qxy_gpu, field_array[j].Qxz_gpu,
+                                        field_array[j].Qyx_gpu, field_array[j].Qyy_gpu, field_array[j].Qyz_gpu,
+                                        field_array[j].Qzx_gpu, field_array[j].Qzy_gpu, field_array[j].Qzz_gpu,
+                                        surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
+                                        REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
+
+                            aux2 = numpy.zeros(Nround)
+                            F_gpu.get(aux2)
+                            aux += aux2
 
                 else: 
                     Fx_gpu = gpuarray.zeros(Nround, dtype=REAL)     
@@ -535,6 +571,32 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
 
                     aux = numpy.zeros(Nround)
                     F_gpu.get(aux)
+
+                    if len(field_array[j].p)>0:                        # Dipole component
+                        F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
+                        
+                        computeRHS_gpu_dipole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
+                                    field_array[j].px_gpu, field_array[j].py_gpu, field_array[j].pz_gpu,
+                                    surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
+                                    REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
+
+                        aux2 = numpy.zeros(Nround)
+                        F_gpu.get(aux2)
+                        aux += aux2
+
+                    if len(field_array[j].Q)>0:                        # quadrupole component
+                        F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
+                        
+                        computeRHS_gpu_quadrupole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
+                                    field_array[j].Qxx_gpu, field_array[j].Qxy_gpu, field_array[j].Qxz_gpu,
+                                    field_array[j].Qyx_gpu, field_array[j].Qyy_gpu, field_array[j].Qyz_gpu,
+                                    field_array[j].Qzx_gpu, field_array[j].Qzy_gpu, field_array[j].Qzz_gpu,
+                                    surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
+                                    REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
+
+                        aux2 = numpy.zeros(Nround)
+                        F_gpu.get(aux2)
+                        aux += aux2
 
                 else:
                     Fx_gpu = gpuarray.zeros(Nround, dtype=REAL)     

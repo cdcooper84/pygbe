@@ -158,6 +158,18 @@ class fields():
         self.yq_gpu = []    # y position of charges on gpu
         self.zq_gpu = []    # z position of charges on gpu
         self.q_gpu  = []    # value of charges on gpu
+        self.px_gpu = []    # value of x dipole on gpu
+        self.py_gpu = []    # value of y dipole on gpu
+        self.pz_gpu = []    # value of z dipole on gpu
+        self.Qxx_gpu = []   # value of xx quadrupole on gpu
+        self.Qxy_gpu = []   # value of xy quadrupole on gpu
+        self.Qxz_gpu = []   # value of xz quadrupole on gpu
+        self.Qyx_gpu = []   # value of yx quadrupole on gpu
+        self.Qyy_gpu = []   # value of yy quadrupole on gpu
+        self.Qyz_gpu = []   # value of yz quadrupole on gpu
+        self.Qzx_gpu = []   # value of zx quadrupole on gpu
+        self.Qzy_gpu = []   # value of zy quadrupole on gpu
+        self.Qzz_gpu = []   # value of zz quadrupole on gpu
 
 class timings():
     def __init__(self):
@@ -736,7 +748,7 @@ def fill_surface(surf,param):
     x_center[1] = numpy.average(surf.yi).astype(param.REAL)
     x_center[2] = numpy.average(surf.zi).astype(param.REAL)
     dist = numpy.sqrt((surf.xi-x_center[0])**2+(surf.yi-x_center[1])**2+(surf.zi-x_center[2])**2)
-    R_C0 = max(dist)
+    R_C0 = max(dist)/2
 
     # Generate tree, compute indices and precompute terms for M2M
     surf.tree = generateTree(surf.xi,surf.yi,surf.zi,param.NCRIT,param.Nm,N,R_C0,x_center)
@@ -985,6 +997,19 @@ def dataTransfer(surf_array, field_array, ind, param, kernel):
             field_array[f].yq_gpu = gpuarray.to_gpu(field_array[f].xq[:,1].astype(REAL))
             field_array[f].zq_gpu = gpuarray.to_gpu(field_array[f].xq[:,2].astype(REAL))
             field_array[f].q_gpu  = gpuarray.to_gpu(field_array[f].q.astype(REAL))
+
+            if param.args.polarizable:
+                if len(field_array[f].Q)>0:
+                    field_array[f].Qxx_gpu  = gpuarray.to_gpu(field_array[f].Q[:,0,0].astype(REAL))
+                    field_array[f].Qxy_gpu  = gpuarray.to_gpu(field_array[f].Q[:,0,1].astype(REAL))
+                    field_array[f].Qxz_gpu  = gpuarray.to_gpu(field_array[f].Q[:,0,2].astype(REAL))
+                    field_array[f].Qyx_gpu  = gpuarray.to_gpu(field_array[f].Q[:,1,0].astype(REAL))
+                    field_array[f].Qyy_gpu  = gpuarray.to_gpu(field_array[f].Q[:,1,1].astype(REAL))
+                    field_array[f].Qyz_gpu  = gpuarray.to_gpu(field_array[f].Q[:,1,2].astype(REAL))
+                    field_array[f].Qzx_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,0].astype(REAL))
+                    field_array[f].Qzy_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,1].astype(REAL))
+                    field_array[f].Qzz_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,2].astype(REAL))
+                    
 
 
 

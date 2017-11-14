@@ -302,7 +302,10 @@ def main(log_output=True):
             print '\nSelf-consistent iteration %i'%iteration
             print 'Generate RHS'
             tic = time.time()
+#if param.GPU==0:
             F = generateRHS(field_array, surf_array, param, kernel, timing, ind0)
+#            elif param.GPU==1:
+#                F = generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0)
             toc = time.time()
             rhs_time += toc-tic
 
