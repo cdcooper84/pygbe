@@ -281,6 +281,7 @@ def main(log_output=True):
 
         # finer parameters for reaction field calculation
         par_reac = parameters()
+        par_reac.BSZ = param.BSZ
         par_reac.REAL = param.REAL
         par_reac.K = param.K
         par_reac.kappa = param.kappa

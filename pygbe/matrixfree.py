@@ -24,7 +24,7 @@ import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
 from tree.direct import coulomb_direct, coulomb_energy_multipole, compute_induced_dipole
-from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_d2phirdr2
+from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_dphirdr_gpu, get_d2phirdr2
 from classes import parameters, index_constant
 import time
 from util.semi_analytical import GQ_1D
@@ -993,10 +993,12 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
 #                   interior but calculation done in exterior
                     C1 = s.E_hat
 
-                    dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                    if par_reac.GPU==0:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, C1*s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                    else:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr_gpu (s.phi, C1*s.dphi, s, f, par_reac, kernel)
                             
                     AI_int += AI
-                    phi_reac -= phi_aux # Minus sign to account for normal pointing out
 
                     dphix_reac -= dphix_aux
                     dphiy_reac -= dphiy_aux
@@ -1012,7 +1014,10 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
 
                     Naux += len(s.triangle)
 
-                    dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                    if par_reac.GPU==0:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr (s.phi, s.dphi, s, f.xq, s.tree, par_reac, ind_reac)
+                    else:
+                        dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr_gpu (s.phi, s.dphi, s, f, par_reac, kernel)
                     
                     AI_int += AI
 
