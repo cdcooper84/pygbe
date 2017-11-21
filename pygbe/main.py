@@ -414,17 +414,17 @@ def main(log_output=True):
         if f.coulomb == 1:
             if param.args.polarizable:
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
-                E_coul.append(coulombEnergy(f, param))
+                E_coul.append(coulombEnergy(f, param, kernel))
 
                 print 'Calculate vacuum induced dipole'
                 f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
                 coulomb_polarizable_dipole(f, param) 
                 print 'Calculate Coulomb energy in vacuum for region %i'%i
-                E_coul_vac.append(coulombEnergy(f, param))
+                E_coul_vac.append(coulombEnergy(f, param, kernel))
                 print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)
             else:
                 print 'Calculate Coulomb energy for region %i'%i
-                E_coul.append(coulombEnergy(f, param))
+                E_coul.append(coulombEnergy(f, param, kernel))
                 print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)
     toc = time.time()
     print 'Time Ecoul: %fs'%(toc-tic)

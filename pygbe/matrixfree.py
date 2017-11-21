@@ -1061,11 +1061,21 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                 f.p_pol[:,2] = pz_pol 
 
 
-def coulombEnergy(f, param):
+def coulombEnergy(f, param, kernel):
 
     point_energy = numpy.zeros(len(f.q), param.REAL)
     if param.args.polarizable==0: #only point charges
-        coulomb_direct(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, point_energy)
+        if param.GPU==0:
+            coulomb_direct(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, point_energy)
+
+        elif param.GPU==1:
+
+            GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
+            coulomb_direct_gpu = kernel.get_function("coulomb_direct")
+            point_energy_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
+            coulomb_direct_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu, point_energy_gpu, numpy.int32(len(f.q)), block=(param.BSZ,1,1), grid=(GSZ,1))
+            point_energy_gpu.get(point_energy)
+
     else: # contains multipoles
         coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
                                  f.p[:,0], f.p[:,1], f.p[:,2],

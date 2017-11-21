@@ -3075,6 +3075,71 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         }
     }
 
+
+    __global__ void coulomb_direct(REAL *xq, REAL *yq, REAL *zq,
+                                REAL *q, REAL *point_energy, int Nq)
+    {
+        int I = threadIdx.x + blockIdx.x*blockDim.x;
+        REAL x, y, z, sum;
+        REAL dx, dy, dz, r, eps = 1e-16;
+        __shared__ REAL xq_sh[BSZ], yq_sh[BSZ], zq_sh[BSZ], q_sh[BSZ];
+
+        x = xq[I];
+        y = yq[I];
+        z = zq[I];
+        sum = 0.;
+
+        for (int block=0; block<(Nq-1)/BSZ; block++)
+        {
+            __syncthreads();
+            xq_sh[threadIdx.x] = xq[block*BSZ+threadIdx.x];
+            yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
+            zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
+            q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
+            __syncthreads();
+
+            if (I<Nq)
+            {
+                for (int j=0; j<BSZ; j++)
+                {
+                    dx = x - xq_sh[j];
+                    dy = y - yq_sh[j];
+                    dz = z - zq_sh[j];
+                    r  = rsqrt(dx*dx + dy*dy + dz*dz + eps*eps);
+
+                    if (r<1e12)
+                        sum += q_sh[j]*r;
+                }
+            }
+        }
+
+        int block = (Nq-1)/BSZ; 
+        __syncthreads();
+        xq_sh[threadIdx.x] = xq[block*BSZ+threadIdx.x];
+        yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
+        zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
+        q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
+        __syncthreads();
+
+        if (I<Nq)
+        {
+            for (int j=0; j<Nq-block*BSZ; j++)
+            {
+                dx = x - xq_sh[j];
+                dy = y - yq_sh[j];
+                dz = z - zq_sh[j];
+                r  = rsqrt(dx*dx + dy*dy + dz*dz + eps*eps);
+
+                if (r<1e12)
+                    sum += q_sh[j]*r;
+            }
+        }
+
+        if (I<Nq)
+        {
+            point_energy[I] = q[I]*sum;
+        }
+    }
     
     """%{'blocksize':BSZ, 'Nmult':Nm, 'K_near':K_fine, 'Ptree':P, 'precision':REAL}, nvcc="nvcc", options=["-use_fast_math","-Xptxas=-v,-abi=no"])
 
