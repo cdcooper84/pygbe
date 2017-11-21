@@ -3075,7 +3075,6 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         }
     }
 
-
     __global__ void coulomb_direct(REAL *xq, REAL *yq, REAL *zq,
                                 REAL *q, REAL *point_energy, int Nq)
     {
@@ -3119,6 +3118,155 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
         zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
         q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
+        __syncthreads();
+
+        if (I<Nq)
+        {
+            for (int j=0; j<Nq-block*BSZ; j++)
+            {
+                dx = x - xq_sh[j];
+                dy = y - yq_sh[j];
+                dz = z - zq_sh[j];
+                r  = rsqrt(dx*dx + dy*dy + dz*dz + eps*eps);
+
+                if (r<1e12)
+                    sum += q_sh[j]*r;
+            }
+        }
+
+        if (I<Nq)
+        {
+            point_energy[I] = q[I]*sum;
+        }
+    }
+
+    __device__ coulomb_dphi_multipole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, REAL *q,
+                                      REAL *px, REAL *py, REAL *pz, REAL *Qxx, REAL *Qxy, REAL *Qxz,
+                                      REAL *Qyx, REAL *Qyy, REAL *Qyz, REAL *Qzx, REAL *Qzy, REAL *Qzz,
+                                      REAL &dphix_coul, REAL &dphiy_coul, REAL &dphiz_coul, int size)
+
+    {
+        REAL r, r3, r5, r7;
+        REAL eps = 1e-16
+        REAL T0, T1[3], T2[3][3], Ri[3], sum[3];
+        REAL dkl, dkm;
+
+        sum[0] = 0;
+        sum[1] = 0;
+        sum[2] = 0;
+        for (int j=0; j<size; j++)
+        {
+            Ri[0] = x - xq[j];
+            Ri[1] = y - yq[j];
+            Ri[2] = z - zq[j];
+            r  = rsqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+            r3 = r*r*r;
+            r5 = r3*r*r;
+            r7 = r5*r*r;
+
+            if (r<1e12)
+            {
+                for (int k=0; k<3; k++)
+                {
+                    T0 = -Ri[k]*r3
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+                        T1[l] = dkl*r3 - 3*Ri[k]*Ri[l]*r5;
+
+                        for (int m=0; m<3; m++)
+                        {
+                            dkm = (REAL)(k==m);
+                            T2[l][m] = (dkm*Ri[l]+dkl*Ri[m])/r5 - 5*Ri[l]*Ri[m]*Ri[k]/r7;
+                        }
+                    }
+
+                    sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
+                           + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
+                                + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
+                                + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
+                }
+            }
+        }
+        dphix_coul += sum[0];
+        dphiy_coul += sum[1];
+        dphiz_coul += sum[2];
+    }
+
+    __global__ void compute_induced_dipole(REAL *xq, REAL *yq, REAL *zq,
+                                        REAL *q, REAL *px_tot, REAL *py_tot, REAL *pz_tot,
+                                        REAL *px_pol, REAL *py_pol, REAL *pz_pol,
+                                        REAL *Qxx, REAL *Qxy, REAL *Qxz,
+                                        REAL *Qyx, REAL *Qyy, REAL *Qyz,
+                                        REAL *Qzx, REAL *Qzy, REAL *Qzz,
+                                        REAL *alphaxx, REAL *alphaxy, REAL *alphaxz,
+                                        REAL *alphayx, REAL *alphayy, REAL *alphayz,
+                                        REAL *alphazx, REAL *alphazy, REAL *alphazz,
+                                        REAL *dphix_reac, REAL *dphiy_reac, REAL *dphiz_reac,
+                                        REAL E, int Nq)
+    {
+        int I = threadIdx.x + blockIdx.x*blockDim.x;
+        REAL x, y, z;
+        REAL dphix_coul = 0, dphiy_coul = 0, dphiz_coul = 0;
+        REAL dx, dy, dz, r, eps = 1e-16;
+        __shared__ REAL xq_sh[BSZ], yq_sh[BSZ], zq_sh[BSZ], q_sh[BSZ];
+        __shared__ REAL px_sh[BSZ], py_sh[BSZ], pz_sh[BSZ];
+        __shared__ REAL Qxx_sh[BSZ], Qxy_sh[BSZ], Qxz_sh[BSZ];
+        __shared__ REAL Qyx_sh[BSZ], Qyy_sh[BSZ], Qyz_sh[BSZ];
+        __shared__ REAL Qzx_sh[BSZ], Qzy_sh[BSZ], Qzz_sh[BSZ];
+
+        x = xq[I];
+        y = yq[I];
+        z = zq[I];
+
+        for (int block=0; block<(Nq-1)/BSZ; block++)
+        {
+            __syncthreads();
+            xq_sh[threadIdx.x] = xq[block*BSZ+threadIdx.x];
+            yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
+            zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
+            q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
+            px_sh[threadIdx.x] = px_tot[block*BSZ+threadIdx.x];
+            py_sh[threadIdx.x] = py_tot[block*BSZ+threadIdx.x];
+            pz_sh[threadIdx.x] = pz_tot[block*BSZ+threadIdx.x];
+            Qxx_sh[threadIdx.x] = Qxx_tot[block*BSZ+threadIdx.x];
+            Qxy_sh[threadIdx.x] = Qxy_tot[block*BSZ+threadIdx.x];
+            Qxz_sh[threadIdx.x] = Qxz_tot[block*BSZ+threadIdx.x];
+            Qyx_sh[threadIdx.x] = Qyx_tot[block*BSZ+threadIdx.x];
+            Qyy_sh[threadIdx.x] = Qyy_tot[block*BSZ+threadIdx.x];
+            Qyz_sh[threadIdx.x] = Qyz_tot[block*BSZ+threadIdx.x];
+            Qzx_sh[threadIdx.x] = Qzx_tot[block*BSZ+threadIdx.x];
+            Qzy_sh[threadIdx.x] = Qzy_tot[block*BSZ+threadIdx.x];
+            Qzz_sh[threadIdx.x] = Qzz_tot[block*BSZ+threadIdx.x];
+            __syncthreads();
+
+            if (I<Nq)
+            {
+                coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh
+                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh
+                                        Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
+                                        dphix_coul, dphiy_coul, dphiz_coul, BSZ);
+            }
+        }
+
+        int block = (Nq-1)/BSZ; 
+        __syncthreads();
+        xq_sh[threadIdx.x] = xq[block*BSZ+threadIdx.x];
+        yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
+        zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
+        q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
+        px_sh[threadIdx.x] = px_tot[block*BSZ+threadIdx.x];
+        py_sh[threadIdx.x] = py_tot[block*BSZ+threadIdx.x];
+        pz_sh[threadIdx.x] = pz_tot[block*BSZ+threadIdx.x];
+        Qxx_sh[threadIdx.x] = Qxx_tot[block*BSZ+threadIdx.x];
+        Qxy_sh[threadIdx.x] = Qxy_tot[block*BSZ+threadIdx.x];
+        Qxz_sh[threadIdx.x] = Qxz_tot[block*BSZ+threadIdx.x];
+        Qyx_sh[threadIdx.x] = Qyx_tot[block*BSZ+threadIdx.x];
+        Qyy_sh[threadIdx.x] = Qyy_tot[block*BSZ+threadIdx.x];
+        Qyz_sh[threadIdx.x] = Qyz_tot[block*BSZ+threadIdx.x];
+        Qzx_sh[threadIdx.x] = Qzx_tot[block*BSZ+threadIdx.x];
+        Qzy_sh[threadIdx.x] = Qzy_tot[block*BSZ+threadIdx.x];
+        Qzz_sh[threadIdx.x] = Qzz_tot[block*BSZ+threadIdx.x];
         __syncthreads();
 
         if (I<Nq)
