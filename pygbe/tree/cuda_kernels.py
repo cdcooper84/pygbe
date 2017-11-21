@@ -1396,8 +1396,8 @@ def kernels(BSZ, Nm, K_fine, P, REAL):
                 dPHI_Vy -= dy*aux;
                 dPHI_Vz -= dz*aux;
                 dPHI_Kx += aux*nx-3*aux*dx*(nx*dx+ny*dy+nz*dz)*(r*r);
-                dPHI_Ky += aux*ny-3*aux*dx*(nx*dx+ny*dy+nz*dz)*(r*r);
-                dPHI_Kz += aux*nz-3*aux*dx*(nx*dx+ny*dy+nz*dz)*(r*r);
+                dPHI_Ky += aux*ny-3*aux*dy*(nx*dx+ny*dy+nz*dz)*(r*r);
+                dPHI_Kz += aux*nz-3*aux*dz*(nx*dx+ny*dy+nz*dz)*(r*r);
             }
 
             else // this will never fire because it is always laplace in this case
@@ -1405,6 +1405,85 @@ def kernels(BSZ, Nm, K_fine, P, REAL):
                 aux = Wk[kk]*Area[j]*exp(-kappa*1/r)*r;
                 dPHI_Vx += aux;
                 dPHI_Kx += aux*(nx*dx+ny*dy+nz*dz)*r*(kappa+r);
+            }
+
+        }
+    }
+
+    __device__ __inline__ void GQ_fine_2derivative(REAL &ddPHI_Kxx, REAL &ddPHI_Vxx, 
+                            REAL &ddPHI_Kxy, REAL &ddPHI_Vxy, REAL &ddPHI_Kxz, REAL &ddPHI_Vxz, 
+                            REAL &ddPHI_Kyx, REAL &ddPHI_Vyx, REAL &ddPHI_Kyy, REAL &ddPHI_Vyy, REAL &ddPHI_Kyz, REAL &ddPHI_Vyz,
+                            REAL &ddPHI_Kzx, REAL &ddPHI_Vzx, REAL &ddPHI_Kzy, REAL &ddPHI_Vzy, REAL &ddPHI_Kzz, REAL &ddPHI_Vzz,
+                            REAL *panel, int J, REAL xi, REAL yi, REAL zi, 
+                            REAL kappa, REAL *Xk, REAL *Wk, REAL *Area, int LorY)
+    {
+        REAL nx, ny, nz;
+        REAL dx, dy, dz, r, r2, r3, aux;
+
+        ddPHI_Kxx = 0.;
+        ddPHI_Vxx = 0.;
+        ddPHI_Kxy = 0.;
+        ddPHI_Vxy = 0.;
+        ddPHI_Kxz = 0.;
+        ddPHI_Vxz = 0.;
+        ddPHI_Kyx = 0.;
+        ddPHI_Vyx = 0.;
+        ddPHI_Kyy = 0.;
+        ddPHI_Vyy = 0.;
+        ddPHI_Kyz = 0.;
+        ddPHI_Vyz = 0.;
+        ddPHI_Kzx = 0.;
+        ddPHI_Vzx = 0.;
+        ddPHI_Kzy = 0.;
+        ddPHI_Vzy = 0.;
+        ddPHI_Kzz = 0.;
+        ddPHI_Vzz = 0.;
+        int j = J/9;
+
+        aux = 1/(2*Area[j]);
+        nx = ((panel[J+4]-panel[J+1])*(panel[J+2]-panel[J+8]) - (panel[J+5]-panel[J+2])*(panel[J+1]-panel[J+7])) * aux;
+        ny = ((panel[J+5]-panel[J+2])*(panel[J+0]-panel[J+6]) - (panel[J+3]-panel[J+0])*(panel[J+2]-panel[J+8])) * aux;
+        nz = ((panel[J+3]-panel[J+0])*(panel[J+1]-panel[J+7]) - (panel[J+4]-panel[J+1])*(panel[J+0]-panel[J+6])) * aux;
+
+        #pragma unroll
+        for (int kk=0; kk<K_fine; kk++)
+        {
+            dx = xi - (panel[J+0]*Xk[3*kk] + panel[J+3]*Xk[3*kk+1] + panel[J+6]*Xk[3*kk+2]);
+            dy = yi - (panel[J+1]*Xk[3*kk] + panel[J+4]*Xk[3*kk+1] + panel[J+7]*Xk[3*kk+2]);
+            dz = zi - (panel[J+2]*Xk[3*kk] + panel[J+5]*Xk[3*kk+1] + panel[J+8]*Xk[3*kk+2]);
+            r  = rsqrt(dx*dx + dy*dy + dz*dz); // r is 1/r!!!
+            r2 = r*r;
+            r3 = r2*r;
+
+            if (LorY==1)
+            {
+                aux = Wk[kk]*Area[j]*r3;
+                ddPHI_Vxx += aux*(-1+3*dx*dx*r2);
+                ddPHI_Vxy += aux*3*dx*dy*r2;
+                ddPHI_Vxz += aux*3*dx*dz*r2;
+                ddPHI_Vyx += aux*3*dy*dx*r2;
+                ddPHI_Vyy += aux*(-1+3*dy*dy*r2);
+                ddPHI_Vxz += aux*3*dy*dz*r2;
+                ddPHI_Vzx += aux*3*dz*dx*r2;
+                ddPHI_Vzy += aux*3*dz*dy*r2;
+                ddPHI_Vzz += aux*(-1+3*dz*dz*r2);
+                ddPHI_Kxx += -3*aux*r2*(3*dx*nx + dy*ny + dz*nz - 5*r2*dx*dx*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kxy += -3*aux*r2*(dx*ny + dy*nx - 5*r2*dx*dy*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kxz += -3*aux*r2*(dx*nz + dz*nx - 5*r2*dx*dz*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kyx += -3*aux*r2*(dy*nx + dx*ny - 5*r2*dy*dx*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kyy += -3*aux*r2*(3*dy*ny + dx*nx + dz*nz - 5*r2*dy*dy*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kyz += -3*aux*r2*(dy*nz + dz*ny - 5*r2*dy*dz*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kzx += -3*aux*r2*(dz*nx + dx*nz - 5*r2*dz*dx*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kzy += -3*aux*r2*(dz*ny + dy*nz - 5*r2*dz*dy*(dx*nx+dy*ny+dz*nz)); 
+                ddPHI_Kzz += -3*aux*r2*(3*dz*nz + dy*ny + dx*nx - 5*r2*dz*dz*(dx*nx+dy*ny+dz*nz)); 
+
+            }
+
+            else // this will never fire because it is always laplace in this case
+            {
+                aux = Wk[kk]*Area[j]*exp(-kappa*1/r)*r;
+                ddPHI_Vxx += aux;
+                ddPHI_Kxx += aux*(nx*dx+ny*dy+nz*dz)*r*(kappa+r);
             }
 
         }
@@ -2395,6 +2474,281 @@ __global__ void get_dphirdr(REAL *dphir_x, REAL *dphir_y, REAL *dphir_z, REAL *x
             dphir_x[i] = (-sum_Kx + sum_Vx)/(4*M_PI);
             dphir_y[i] = (-sum_Ky + sum_Vy)/(4*M_PI);
             dphir_z[i] = (-sum_Kz + sum_Vz)/(4*M_PI);
+            AI_int_gpu[i] = an_counter;
+        }
+    }
+
+__global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz, 
+                            REAL *ddphir_yx, REAL *ddphir_yy, REAL *ddphir_yz,
+                            REAL *ddphir_zx, REAL *ddphir_zy, REAL *ddphir_zz,
+                            REAL *xq, REAL *yq, REAL *zq,
+                            REAL *m, REAL *mx, REAL *my, REAL *mz, REAL *mKc, REAL *mVc, 
+                            REAL *xj, REAL *yj, REAL *zj, REAL *Area, int *k, REAL *vertex, 
+                            int Nj, int Nq, int K, REAL *xk, REAL *wk, 
+                            REAL threshold, int *AI_int_gpu, int Nk, REAL *Xsk, REAL *Wsk)
+    {
+        int i = threadIdx.x + blockIdx.x*BSZ;
+        REAL xi, yi, zi, dx, dy, dz, R, R2, R3;
+        int jblock, triangle;
+
+        __shared__ REAL ver_sh[9*BSZ],
+                        xj_sh[BSZ], yj_sh[BSZ], zj_sh[BSZ], A_sh[BSZ], k_sh[BSZ],
+                        m_sh[BSZ], mx_sh[BSZ], my_sh[BSZ], mz_sh[BSZ], mKc_sh[BSZ],
+                        mVc_sh[BSZ];
+
+
+
+        REAL sum_Vxx = 0., sum_Kxx = 0.;
+        REAL sum_Vxy = 0., sum_Kxy = 0.;
+        REAL sum_Vxz = 0., sum_Kxz = 0.;
+        REAL sum_Vyx = 0., sum_Kyx = 0.;
+        REAL sum_Vyy = 0., sum_Kyy = 0.;
+        REAL sum_Vyz = 0., sum_Kyz = 0.;
+        REAL sum_Vzx = 0., sum_Kzx = 0.;
+        REAL sum_Vzy = 0., sum_Kzy = 0.;
+        REAL sum_Vzz = 0., sum_Kzz = 0.;
+
+        xi = xq[i];
+        yi = yq[i];
+        zi = zq[i];
+        int an_counter = 0;
+
+        for(jblock=0; jblock<(Nj-1)/BSZ; jblock++)
+        {   
+            __syncthreads();
+            xj_sh[threadIdx.x] = xj[jblock*BSZ + threadIdx.x];
+            yj_sh[threadIdx.x] = yj[jblock*BSZ + threadIdx.x];
+            zj_sh[threadIdx.x] = zj[jblock*BSZ + threadIdx.x];
+            m_sh[threadIdx.x]  = m[jblock*BSZ + threadIdx.x];
+            mx_sh[threadIdx.x] = mx[jblock*BSZ + threadIdx.x];
+            my_sh[threadIdx.x] = my[jblock*BSZ + threadIdx.x];
+            mz_sh[threadIdx.x] = mz[jblock*BSZ + threadIdx.x];
+            mKc_sh[threadIdx.x] = mKc[jblock*BSZ + threadIdx.x];
+            mVc_sh[threadIdx.x] = mVc[jblock*BSZ + threadIdx.x];
+            k_sh[threadIdx.x]  = k[jblock*BSZ + threadIdx.x];
+            A_sh[threadIdx.x]  = Area[(jblock*BSZ + threadIdx.x)];
+            for (int vert=0; vert<9; vert++)
+            {
+                triangle = jblock*BSZ+threadIdx.x;
+                ver_sh[9*threadIdx.x+vert] = vertex[9*triangle+vert];
+            }
+            __syncthreads();
+            
+            for (int j=0; j<BSZ; j++)
+            {
+                dx = xi - (ver_sh[9*j] + ver_sh[9*j+3] + ver_sh[9*j+6])/3;
+                dy = yi - (ver_sh[9*j+1] + ver_sh[9*j+4] + ver_sh[9*j+7])/3;
+                dz = zi - (ver_sh[9*j+2] + ver_sh[9*j+5] + ver_sh[9*j+8])/3;
+                R  = sqrt(dx*dx + dy*dy + dz*dz);
+
+                if((sqrt(2*A_sh[j])/R) < threshold)
+                {
+                    dx = xi - xj_sh[j];
+                    dy = yi - yj_sh[j];
+                    dz = zi - zj_sh[j];
+                    R  = rsqrt(dx*dx + dy*dy + dz*dz); // r is 1/r
+                    R2 = R*R;
+                    R3 = R2*R;
+
+                    sum_Vxx += m_sh[j]*R3*(-1 + 3*dx*dx*R2);
+                    sum_Vxy += m_sh[j]*R3*3*dx*dy*R2;
+                    sum_Vxz += m_sh[j]*R3*3*dx*dz*R2;
+                    sum_Vyx += m_sh[j]*R3*3*dy*dx*R2;
+                    sum_Vyy += m_sh[j]*R3*(-1 + 3*dy*dy*R2);
+                    sum_Vyz += m_sh[j]*R3*3*dy*dz*R2;
+                    sum_Vzx += m_sh[j]*R3*3*dz*dx*R2;
+                    sum_Vzy += m_sh[j]*R3*3*dz*dy*R2;
+                    sum_Vzz += m_sh[j]*R3*(-1 + 3*dz*dz*R2);
+                    sum_Kxx -= 3*R3*R2*(2*dx*mx_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dx*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kxy -= 3*R3*R2*(dx*my_sh[j] + dy*mx_sh[j] - 5*R2*dx*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kxz -= 3*R3*R2*(dx*mz_sh[j] + dz*mx_sh[j] - 5*R2*dx*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyx -= 3*R3*R2*(dy*mx_sh[j] + dx*my_sh[j] - 5*R2*dy*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyy -= 3*R3*R2*(2*dy*my_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dy*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyz -= 3*R3*R2*(dy*mz_sh[j] + dz*my_sh[j] - 5*R2*dy*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzx -= 3*R3*R2*(dz*mx_sh[j] + dx*mz_sh[j] - 5*R2*dz*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzy -= 3*R3*R2*(dz*my_sh[j] + dy*mz_sh[j] - 5*R2*dz*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzz -= 3*R3*R2*(2*dz*mz_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dz*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+
+                }
+
+                else if(k_sh[j]==0)
+                {
+                    REAL ddPHI_Kxx = 0.;
+                    REAL ddPHI_Vxx = 0.;
+                    REAL ddPHI_Kxy = 0.;
+                    REAL ddPHI_Vxy = 0.;
+                    REAL ddPHI_Kxz = 0.;
+                    REAL ddPHI_Vxz = 0.;
+                    REAL ddPHI_Kyx = 0.;
+                    REAL ddPHI_Vyx = 0.;
+                    REAL ddPHI_Kyy = 0.;
+                    REAL ddPHI_Vyy = 0.;
+                    REAL ddPHI_Kyz = 0.;
+                    REAL ddPHI_Vyz = 0.;
+                    REAL ddPHI_Kzx = 0.;
+                    REAL ddPHI_Vzx = 0.;
+                    REAL ddPHI_Kzy = 0.;
+                    REAL ddPHI_Vzy = 0.;
+                    REAL ddPHI_Kzz = 0.;
+                    REAL ddPHI_Vzz = 0.;
+
+                    GQ_fine_2derivative(ddPHI_Kxx, ddPHI_Vxx, ddPHI_Kxy, ddPHI_Vxy, ddPHI_Kxz, ddPHI_Vxz, 
+                                       ddPHI_Kyx, ddPHI_Vyx, ddPHI_Kyy, ddPHI_Vyy, ddPHI_Kyz, ddPHI_Vyz,
+                                       ddPHI_Kzx, ddPHI_Vzx, ddPHI_Kzy, ddPHI_Vzy, ddPHI_Kzz, ddPHI_Vzz,
+                                       ver_sh, 9*j, xi, yi, zi, 1e-15, Xsk, Wsk, A_sh, 1);
+                    //REAL panel[9] = {ver_sh[9*j], ver_sh[9*j+1], ver_sh[9*j+2],
+                    //                 ver_sh[9*j+3], ver_sh[9*j+4], ver_sh[9*j+5],
+                    //                 ver_sh[9*j+6], ver_sh[9*j+7], ver_sh[9*j+8]};
+                    //SA(PHI_K, PHI_V, panel, xi, yi, zi, 
+                    //   1., 1., 1e-15, 0, xk, wk, 9, 1);
+        
+                    sum_Vxx += ddPHI_Vxx * mVc_sh[j];
+                    sum_Vxy += ddPHI_Vxy * mVc_sh[j];
+                    sum_Vxz += ddPHI_Vxz * mVc_sh[j];
+                    sum_Kxx += ddPHI_Kxx * mKc_sh[j];
+                    sum_Kxy += ddPHI_Kxy * mKc_sh[j];
+                    sum_Kxz += ddPHI_Kxz * mKc_sh[j];
+                    sum_Vyx += ddPHI_Vyx * mVc_sh[j];
+                    sum_Vyy += ddPHI_Vyy * mVc_sh[j];
+                    sum_Vyz += ddPHI_Vyz * mVc_sh[j];
+                    sum_Kyx += ddPHI_Kyx * mKc_sh[j];
+                    sum_Kyy += ddPHI_Kyy * mKc_sh[j];
+                    sum_Kyz += ddPHI_Kyz * mKc_sh[j];
+                    sum_Vzx += ddPHI_Vzx * mVc_sh[j];
+                    sum_Vzy += ddPHI_Vzy * mVc_sh[j];
+                    sum_Vzz += ddPHI_Vzz * mVc_sh[j];
+                    sum_Kzx += ddPHI_Kzx * mKc_sh[j];
+                    sum_Kzy += ddPHI_Kzy * mKc_sh[j];
+                    sum_Kzz += ddPHI_Kzz * mKc_sh[j];
+                    an_counter += 1;
+                }
+            }
+        }
+    
+        __syncthreads();
+        jblock = (Nj-1)/BSZ;
+        if (threadIdx.x<Nj-jblock*BSZ)
+        {
+            xj_sh[threadIdx.x] = xj[jblock*BSZ + threadIdx.x];
+            yj_sh[threadIdx.x] = yj[jblock*BSZ + threadIdx.x];
+            zj_sh[threadIdx.x] = zj[jblock*BSZ + threadIdx.x];
+            m_sh[threadIdx.x]  = m[jblock*BSZ + threadIdx.x];
+            mx_sh[threadIdx.x] = mx[jblock*BSZ + threadIdx.x];
+            my_sh[threadIdx.x] = my[jblock*BSZ + threadIdx.x];
+            mz_sh[threadIdx.x] = mz[jblock*BSZ + threadIdx.x];
+            mKc_sh[threadIdx.x] = mKc[jblock*BSZ + threadIdx.x];
+            mVc_sh[threadIdx.x] = mVc[jblock*BSZ + threadIdx.x];
+            k_sh[threadIdx.x]  = k[jblock*BSZ + threadIdx.x];
+            A_sh[threadIdx.x]  = Area[jblock*BSZ + threadIdx.x];
+
+            for (int vert=0; vert<9; vert++)
+            {
+                triangle = jblock*BSZ+threadIdx.x;
+                ver_sh[9*threadIdx.x+vert] = vertex[9*triangle+vert];
+            }
+        }
+        __syncthreads();
+
+
+        for (int j=0; j<Nj-(jblock*BSZ); j++)
+        {
+            dx = xi - (ver_sh[9*j] + ver_sh[9*j+3] + ver_sh[9*j+6])/3;
+            dy = yi - (ver_sh[9*j+1] + ver_sh[9*j+4] + ver_sh[9*j+7])/3;
+            dz = zi - (ver_sh[9*j+2] + ver_sh[9*j+5] + ver_sh[9*j+8])/3;
+            R  = sqrt(dx*dx + dy*dy + dz*dz);
+
+            if (i<Nq)
+            {
+                if ((sqrt(2*A_sh[j])/R) < threshold)
+                {
+                    dx = xi - xj_sh[j];
+                    dy = yi - yj_sh[j];
+                    dz = zi - zj_sh[j];
+                    R  = rsqrt(dx*dx + dy*dy + dz*dz); // r is 1/r
+                    R2 = R*R;
+                    R3 = R2*R;
+
+                    sum_Vxx += m_sh[j]*R3*(-1 + 3*dx*dx*R2);
+                    sum_Vxy += m_sh[j]*R3*3*dx*dy*R2;
+                    sum_Vxz += m_sh[j]*R3*3*dx*dz*R2;
+                    sum_Vyx += m_sh[j]*R3*3*dy*dx*R2;
+                    sum_Vyy += m_sh[j]*R3*(-1 + 3*dy*dy*R2);
+                    sum_Vyz += m_sh[j]*R3*3*dy*dz*R2;
+                    sum_Vzx += m_sh[j]*R3*3*dz*dx*R2;
+                    sum_Vzy += m_sh[j]*R3*3*dz*dy*R2;
+                    sum_Vzz += m_sh[j]*R3*(-1 + 3*dz*dz*R2);
+                    sum_Kxx -= 3*R3*R2*(2*dx*mx_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dx*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kxy -= 3*R3*R2*(dx*my_sh[j] + dy*mx_sh[j] - 5*R2*dx*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kxz -= 3*R3*R2*(dx*mz_sh[j] + dz*mx_sh[j] - 5*R2*dx*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyx -= 3*R3*R2*(dy*mx_sh[j] + dx*my_sh[j] - 5*R2*dy*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyy -= 3*R3*R2*(2*dy*my_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dy*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kyz -= 3*R3*R2*(dy*mz_sh[j] + dz*my_sh[j] - 5*R2*dy*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzx -= 3*R3*R2*(dz*mx_sh[j] + dx*mz_sh[j] - 5*R2*dz*dx*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzy -= 3*R3*R2*(dz*my_sh[j] + dy*mz_sh[j] - 5*R2*dz*dy*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+                    sum_Kzz -= 3*R3*R2*(2*dz*mz_sh[j]+ dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j] - 5*R2*dz*dz*(dx*mx_sh[j]+dy*my_sh[j]+dz*mz_sh[j]));
+
+                }
+
+                else if(k_sh[j]==0)
+                {
+                    REAL ddPHI_Kxx = 0.;
+                    REAL ddPHI_Vxx = 0.;
+                    REAL ddPHI_Kxy = 0.;
+                    REAL ddPHI_Vxy = 0.;
+                    REAL ddPHI_Kxz = 0.;
+                    REAL ddPHI_Vxz = 0.;
+                    REAL ddPHI_Kyx = 0.;
+                    REAL ddPHI_Vyx = 0.;
+                    REAL ddPHI_Kyy = 0.;
+                    REAL ddPHI_Vyy = 0.;
+                    REAL ddPHI_Kyz = 0.;
+                    REAL ddPHI_Vyz = 0.;
+                    REAL ddPHI_Kzx = 0.;
+                    REAL ddPHI_Vzx = 0.;
+                    REAL ddPHI_Kzy = 0.;
+                    REAL ddPHI_Vzy = 0.;
+                    REAL ddPHI_Kzz = 0.;
+                    REAL ddPHI_Vzz = 0.;
+
+                    GQ_fine_2derivative(ddPHI_Kxx, ddPHI_Vxx, ddPHI_Kxy, ddPHI_Vxy, ddPHI_Kxz, ddPHI_Vxz, 
+                                       ddPHI_Kyx, ddPHI_Vyx, ddPHI_Kyy, ddPHI_Vyy, ddPHI_Kyz, ddPHI_Vyz,
+                                       ddPHI_Kzx, ddPHI_Vzx, ddPHI_Kzy, ddPHI_Vzy, ddPHI_Kzz, ddPHI_Vzz,
+                                       ver_sh, 9*j, xi, yi, zi, 1e-15, Xsk, Wsk, A_sh, 1);
+        
+                    sum_Vxx += ddPHI_Vxx * mVc_sh[j];
+                    sum_Vxy += ddPHI_Vxy * mVc_sh[j];
+                    sum_Vxz += ddPHI_Vxz * mVc_sh[j];
+                    sum_Kxx += ddPHI_Kxx * mKc_sh[j];
+                    sum_Kxy += ddPHI_Kxy * mKc_sh[j];
+                    sum_Kxz += ddPHI_Kxz * mKc_sh[j];
+                    sum_Vyx += ddPHI_Vyx * mVc_sh[j];
+                    sum_Vyy += ddPHI_Vyy * mVc_sh[j];
+                    sum_Vyz += ddPHI_Vyz * mVc_sh[j];
+                    sum_Kyx += ddPHI_Kyx * mKc_sh[j];
+                    sum_Kyy += ddPHI_Kyy * mKc_sh[j];
+                    sum_Kyz += ddPHI_Kyz * mKc_sh[j];
+                    sum_Vzx += ddPHI_Vzx * mVc_sh[j];
+                    sum_Vzy += ddPHI_Vzy * mVc_sh[j];
+                    sum_Vzz += ddPHI_Vzz * mVc_sh[j];
+                    sum_Kzx += ddPHI_Kzx * mKc_sh[j];
+                    sum_Kzy += ddPHI_Kzy * mKc_sh[j];
+                    sum_Kzz += ddPHI_Kzz * mKc_sh[j];
+                    an_counter += 1;
+                }
+            }
+        }
+       
+        if (i<Nq)
+        {
+            ddphir_xx[i] = (-sum_Kxx + sum_Vxx)/(4*M_PI);
+            ddphir_xy[i] = (-sum_Kxy + sum_Vxy)/(4*M_PI);
+            ddphir_xz[i] = (-sum_Kxz + sum_Vxz)/(4*M_PI);
+            ddphir_yx[i] = (-sum_Kyx + sum_Vyx)/(4*M_PI);
+            ddphir_yy[i] = (-sum_Kyy + sum_Vyy)/(4*M_PI);
+            ddphir_yz[i] = (-sum_Kyz + sum_Vyz)/(4*M_PI);
+            ddphir_zx[i] = (-sum_Kzx + sum_Vzx)/(4*M_PI);
+            ddphir_zy[i] = (-sum_Kzy + sum_Vzy)/(4*M_PI);
+            ddphir_zz[i] = (-sum_Kzz + sum_Vzz)/(4*M_PI);
             AI_int_gpu[i] = an_counter;
         }
     }

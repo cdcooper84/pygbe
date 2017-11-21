@@ -24,7 +24,7 @@ import numpy
 from math import pi
 from tree.FMMutils import computeIndices, precomputeTerms
 from tree.direct import coulomb_direct, coulomb_energy_multipole, compute_induced_dipole
-from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_dphirdr_gpu, get_d2phirdr2
+from projection import project, project_Kt, get_phir, get_phir_gpu, get_dphirdr, get_dphirdr_gpu, get_d2phirdr2, get_d2phirdr2_gpu
 from classes import parameters, index_constant
 import time
 from util.semi_analytical import GQ_1D
@@ -832,7 +832,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 #               interior but calculation done in exterior
                 C1 = s.E_hat
 
-                if param.GPU==0 or (param.GPU==1 and par_reac.args.polarizable):
+                if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, C1*s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
 
                     if par_reac.args.polarizable: # if polarizable multipoles
@@ -845,7 +845,17 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                         
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
+
+                    if par_reac.args.polarizable: # if polarizable multipoles
+                        if len(field_array[f].p)>0:
+                            dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr_gpu (s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
+                        if len(field_array[f].Q)>0:
+                            dphixx_aux, dphixy_aux, dphixz_aux, \
+                            dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                            dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2_gpu (s.phi, C1*s.dphi, s, field_array[f], par_reac, kernel)
+                        
                 
+
                 AI_int += AI
                 phi_reac -= phi_aux # Minus sign to account for normal pointing out
 
@@ -879,7 +889,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
 
                 Naux += len(s.triangle)
 
-                if param.GPU==0 or (param.GPU==1 and par_reac.args.polarizable):
+                if param.GPU==0:
                     phi_aux, AI = get_phir(s.phi, s.dphi, s, field_array[f].xq, s.tree, par_reac, ind_reac)
 
                     if par_reac.args.polarizable: # if polarizable multipoles
@@ -892,7 +902,15 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                         
                 elif param.GPU==1:
                     phi_aux, AI = get_phir_gpu(s.phi, s.dphi, s, field_array[f], par_reac, kernel)
-                
+
+                    if par_reac.args.polarizable: # if polarizable multipoles
+                        if len(field_array[f].p)>0:
+                            dphix_aux, dphiy_aux, dphiz_aux, AI = get_dphirdr_gpu (s.phi, s.dphi, s, field_array[f], par_reac, kernel)
+                        if len(field_array[f].Q)>0:
+                            dphixx_aux, dphixy_aux, dphixz_aux, \
+                            dphiyx_aux, dphiyy_aux, dphiyz_aux, \
+                            dphizx_aux, dphizy_aux, dphizz_aux, AI = get_d2phirdr2_gpu (s.phi, s.dphi, s, field_array[f], par_reac, kernel)
+                 
                 AI_int += AI
                 phi_reac += phi_aux 
 

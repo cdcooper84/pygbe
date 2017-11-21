@@ -748,7 +748,7 @@ def fill_surface(surf,param):
     x_center[1] = numpy.average(surf.yi).astype(param.REAL)
     x_center[2] = numpy.average(surf.zi).astype(param.REAL)
     dist = numpy.sqrt((surf.xi-x_center[0])**2+(surf.yi-x_center[1])**2+(surf.zi-x_center[2])**2)
-    R_C0 = max(dist)/2
+    R_C0 = max(dist)
 
     # Generate tree, compute indices and precompute terms for M2M
     surf.tree = generateTree(surf.xi,surf.yi,surf.zi,param.NCRIT,param.Nm,N,R_C0,x_center)
