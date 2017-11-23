@@ -170,6 +170,15 @@ class fields():
         self.Qzx_gpu = []   # value of zx quadrupole on gpu
         self.Qzy_gpu = []   # value of zy quadrupole on gpu
         self.Qzz_gpu = []   # value of zz quadrupole on gpu
+        self.alphaxx_gpu = []   # value of xx polarizability on gpu
+        self.alphaxy_gpu = []   # value of xy polarizability on gpu
+        self.alphaxz_gpu = []   # value of xz polarizability on gpu
+        self.alphayx_gpu = []   # value of yx polarizability on gpu
+        self.alphayy_gpu = []   # value of yy polarizability on gpu
+        self.alphayz_gpu = []   # value of yz polarizability on gpu
+        self.alphazx_gpu = []   # value of zx polarizability on gpu
+        self.alphazy_gpu = []   # value of zy polarizability on gpu
+        self.alphazz_gpu = []   # value of zz polarizability on gpu
 
 class timings():
     def __init__(self):
@@ -1009,6 +1018,15 @@ def dataTransfer(surf_array, field_array, ind, param, kernel):
                     field_array[f].Qzx_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,0].astype(REAL))
                     field_array[f].Qzy_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,1].astype(REAL))
                     field_array[f].Qzz_gpu  = gpuarray.to_gpu(field_array[f].Q[:,2,2].astype(REAL))
+                    field_array[f].alphaxx_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,0,0].astype(REAL))
+                    field_array[f].alphaxy_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,0,1].astype(REAL))
+                    field_array[f].alphaxz_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,0,2].astype(REAL))
+                    field_array[f].alphayx_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,1,0].astype(REAL))
+                    field_array[f].alphayy_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,1,1].astype(REAL))
+                    field_array[f].alphayz_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,1,2].astype(REAL))
+                    field_array[f].alphazx_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,0].astype(REAL))
+                    field_array[f].alphazy_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,1].astype(REAL))
+                    field_array[f].alphazz_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,2].astype(REAL))
                     
 
 

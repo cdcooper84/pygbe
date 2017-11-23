@@ -418,7 +418,7 @@ def main(log_output=True):
 
                 print 'Calculate vacuum induced dipole'
                 f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
-                coulomb_polarizable_dipole(f, param) 
+                coulomb_polarizable_dipole(f, param, kernel) 
                 print 'Calculate Coulomb energy in vacuum for region %i'%i
                 E_coul_vac.append(coulombEnergy(f, param, kernel))
                 print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)

@@ -1090,7 +1090,7 @@ def coulombEnergy(f, param, kernel):
     Ecoul = numpy.sum(point_energy) * 0.5*C0/(4*pi*f.E)
     return Ecoul
 
-def coulomb_polarizable_dipole(f, param):
+def coulomb_polarizable_dipole(f, param, kernel):
     """  
     Computes polarized dipole component of a collection of polarizabe multipoles
 
@@ -1109,6 +1109,9 @@ def coulomb_polarizable_dipole(f, param):
     px_pol = numpy.zeros(len(f.xq))
     py_pol = numpy.zeros(len(f.xq))
     pz_pol = numpy.zeros(len(f.xq))
+    px_pol_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
+    py_pol_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
+    pz_pol_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
 
     # dummy phi_reac. This is a vacuum calculation
     # then there is no solvent reaction
@@ -1119,18 +1122,46 @@ def coulomb_polarizable_dipole(f, param):
     while dipole_diff>1e-10:
         iteration += 1
         
-        p_tot = f.p + f.p_pol
+        if param.GPU==0:
+            compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
+                                   f.p[:,0], f.p[:,1], f.p[:,2],
+                                   px_pol, py_pol, pz_pol,
+                                   f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
+                                   f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
+                                   f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2],
+                                   f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
+                                   f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
+                                   f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
+                                   dphix_reac, dphiy_reac, dphiz_reac, f.E)
+        elif param.GPU==1:
+            GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
+            compute_induced_dipole_gpu = kernel.get_function("compute_induced_dipole")
 
-        compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
-                               f.p[:,0], f.p[:,1], f.p[:,2],
-                               px_pol, py_pol, pz_pol,
-                               f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
-                               f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
-                               f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2],
-                               f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
-                               f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
-                               f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
-                               dphix_reac, dphiy_reac, dphiz_reac, f.E)
+            dphix_reac_gpu = gpuarray.to_gpu(dphix_reac.astype(param.REAL))
+            dphiy_reac_gpu = gpuarray.to_gpu(dphiy_reac.astype(param.REAL))
+            dphiz_reac_gpu = gpuarray.to_gpu(dphiz_reac.astype(param.REAL))
+
+            p_tot = f.p + f.p_pol
+            f.px_gpu = gpuarray.to_gpu(p_tot[:,0])
+            f.py_gpu = gpuarray.to_gpu(p_tot[:,1])
+            f.pz_gpu = gpuarray.to_gpu(p_tot[:,2])
+
+            compute_induced_dipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu,
+                                    f.px_gpu, f.py_gpu, f.pz_gpu, 
+                                    px_pol_gpu, py_pol_gpu, pz_pol_gpu, 
+                                    f.Qxx_gpu, f.Qxy_gpu, f.Qxz_gpu,
+                                    f.Qyx_gpu, f.Qyy_gpu, f.Qyz_gpu,
+                                    f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
+                                    f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
+                                    f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
+                                    f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu,
+                                    dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
+                                    param.REAL(f.E), numpy.int32(len(f.q)), block=(param.BSZ,1,1), grid=(GSZ,1))
+
+            px_pol_gpu.get(px_pol)
+            py_pol_gpu.get(py_pol)
+            pz_pol_gpu.get(pz_pol)
+
 
         f.p_pol[:,0] = px_pol 
         f.p_pol[:,1] = py_pol 
