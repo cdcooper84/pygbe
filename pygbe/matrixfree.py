@@ -1108,17 +1108,42 @@ def coulombEnergy(f, param, kernel):
             point_energy_gpu.get(point_energy)
 
     else: # contains multipoles
-        coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
-                                 f.p[:,0], f.p[:,1], f.p[:,2],
-                                 f.p_pol[:,0], f.p_pol[:,1], f.p_pol[:,2],
-                                 f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
-                                 f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
-                                 f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
+        if param.GPU==0:
+            coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
+                                     f.p[:,0], f.p[:,1], f.p[:,2],
+                                     f.p_pol[:,0], f.p_pol[:,1], f.p_pol[:,2],
+                                     f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
+                                     f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
+                                     f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
+        elif param.GPU==1:
+
+            GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
+            coulomb_energy_multipole_gpu = kernel.get_function("coulomb_energy_multipole")
+            point_energy_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
+
+            px_pol_gpu = gpuarray.to_gpu(f.p_pol[:,0])
+            py_pol_gpu = gpuarray.to_gpu(f.p_pol[:,1])
+            pz_pol_gpu = gpuarray.to_gpu(f.p_pol[:,2])
+
+            f.px_gpu = gpuarray.to_gpu(f.p_pol[:,0]+f.p[:,0])
+            f.py_gpu = gpuarray.to_gpu(f.p_pol[:,1]+f.p[:,1])
+            f.pz_gpu = gpuarray.to_gpu(f.p_pol[:,2]+f.p[:,2])
+
+            coulomb_energy_multipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu, 
+                                         f.px_gpu, f.py_gpu, f.pz_gpu,
+                                         px_pol_gpu, py_pol_gpu, pz_pol_gpu,
+                                         f.Qxx_gpu, f.Qxy_gpu, f.Qxz_gpu,
+                                         f.Qyx_gpu, f.Qyy_gpu, f.Qyz_gpu,
+                                         f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
+                                         point_energy_gpu, numpy.int32(len(f.q)), 
+                                         block=(param.BSZ,1,1), grid=(GSZ,1))
+
+            point_energy_gpu.get(point_energy)
 
     cal2J = 4.184
     C0 = param.qe**2*param.Na*1e-3*1e10/(cal2J*param.E_0)
-
     Ecoul = numpy.sum(point_energy) * 0.5*C0/(4*pi*f.E)
+
     return Ecoul
 
 def coulomb_polarizable_dipole(f, param, kernel):
