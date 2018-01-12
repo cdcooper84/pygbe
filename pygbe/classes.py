@@ -885,6 +885,17 @@ def initializeField(filename, param):
             field_aux.Q = Q                                         # quadrupole values
             field_aux.alpha = alpha                                 # polarizabilities
 
+            '''
+            print xq[:3]
+            print q[:3]
+            print p[:3]
+            print Q[:3]
+            print alpha[:3]
+            quit()
+            '''
+
+
+
         if int(Nparent[i])==1:                                      # if it is an enclosed region
             field_aux.parent.append(int(parent[i]))                 # pointer to parent surface (enclosing surface)
         if int(Nchild[i])>0:                                        # if there are enclosed regions inside

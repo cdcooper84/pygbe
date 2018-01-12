@@ -298,7 +298,6 @@ def main(log_output=True):
         computeIndices(par_reac.P, ind_reac)
         precomputeTerms(par_reac.P, ind_reac)
 
-
         while dipole_diff>1e-8:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration
@@ -333,6 +332,7 @@ def main(log_output=True):
                     p_pol_prev[i_region][:,:] = f.p_pol[:,:]
 
             dipole_diff = max(dipole_diff_arr)
+            print 'Induced dipole residual: %s'%dipole_diff
             
 
         print 'Took %i iterations for induced dipole in dissolved state to converge'%iteration
@@ -417,9 +417,23 @@ def main(log_output=True):
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
                 E_coul.append(coulombEnergy(f, param, kernel))
 
-                print 'Calculate vacuum induced dipole'
+                print 'Calculate vacuum induced dipole for region %i'%i
                 f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
                 coulomb_polarizable_dipole(f, param, kernel) 
+                
+    
+                print 'Calculate total dipole'
+                ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.q), axis=1)/numpy.sum(numpy.abs(f.q))
+                r = f.xq - ctr
+                d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
+                d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
+                print d_charge
+                print d_dipole
+                print numpy.sum(f.p_pol, axis=0)
+                d_total = d_dipole+d_charge
+                print 'Total dipole in vacuum state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0], d_total[1], d_total[2], numpy.sqrt(numpy.sum(d_total**2)))
+   
+
                 print 'Calculate Coulomb energy in vacuum for region %i'%i
                 E_coul_vac.append(coulombEnergy(f, param, kernel))
                 print 'Region %i: Ecoul = %f kcal/mol = %f kJ/mol'%(i,E_coul[-1],E_coul[-1]*4.184)

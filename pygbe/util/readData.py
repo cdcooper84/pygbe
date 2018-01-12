@@ -131,6 +131,7 @@ def read_tinker(filename, REAL):
     Q     = numpy.zeros((N,3,3))
     alpha = numpy.zeros((N,3,3))
     atom_type  = numpy.chararray(N, itemsize=10)
+    connections = numpy.empty(N, dtype=object)
     header = 0
     for line in file(file_xyz):
         line = line.split()
@@ -141,6 +142,9 @@ def read_tinker(filename, REAL):
             pos[atom_number,1] = REAL(line[3])
             pos[atom_number,2] = REAL(line[4])
             atom_type[atom_number] = line[5]
+            connections[atom_number] = numpy.zeros(len(line)-6, dtype=int)
+            for i in range(6, len(line)):
+                connections[atom_number][i-6] = int(line[i]) - 1 
 
         header = 1
 
@@ -149,6 +153,7 @@ def read_tinker(filename, REAL):
     charge = {}
     dipole = {}
     quadrupole = {}
+    multipole_list = []
     multipole_flag = 0
 
     with open(file_key, 'r') as f:
@@ -171,31 +176,100 @@ def read_tinker(filename, REAL):
 
                 if multipole_flag == 0:
                     key = line[1]
-                    charge[key] = REAL(line[-1])
+                    z_axis = line[2]
+                    x_axis = line[3]
+                    if len(line)>5:
+                        y_axis = line[4]
+                    else:
+                        y_axis = 'NA'
+
+                    multipole_list.append((key, z_axis, x_axis, y_axis))
+
+                    charge[(key, z_axis, x_axis, y_axis)] = REAL(line[-1])
                 if multipole_flag == 1:
-                    dipole[key] = numpy.array([REAL(line[0]), REAL(line[1]), REAL(line[2])]) 
+                    dipole[(key, z_axis, x_axis, y_axis)] = numpy.array([REAL(line[0]), REAL(line[1]), REAL(line[2])]) 
                 if multipole_flag == 2:
-                    quadrupole[key] = numpy.zeros((3,3))
-                    quadrupole[key][0,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis)] = numpy.zeros((3,3))
+                    quadrupole[(key, z_axis, x_axis, y_axis)][0,0] = REAL(line[0])
                 if multipole_flag == 3:
-                    quadrupole[key][1,0] = REAL(line[0])
-                    quadrupole[key][0,1] = REAL(line[0])
-                    quadrupole[key][1,1] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][1,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][0,1] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][1,1] = REAL(line[1])
                 if multipole_flag == 4:
-                    quadrupole[key][2,0] = REAL(line[0])
-                    quadrupole[key][0,2] = REAL(line[0])
-                    quadrupole[key][2,1] = REAL(line[1])
-                    quadrupole[key][1,2] = REAL(line[1])
-                    quadrupole[key][2,2] = REAL(line[2])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][2,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][0,2] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][2,1] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][1,2] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis)][2,2] = REAL(line[2])
                     multipole_flag = -1            
 
                 multipole_flag += 1
                 
     for i in range(N):
-        q[i] = charge[atom_type[i]]
-        p[i,:] = dipole[atom_type[i]]
-        Q[i,:,:] = quadrupole[atom_type[i]]
         alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+
+#       filter possible multipoles by atom type
+        atom_possible = []
+        for j in range(len(multipole_list)):
+            if atom_type[i] == multipole_list[j][0]:
+                atom_possible.append(multipole_list[j])
+
+#       filter possible multipoles by z axis defining atom (needs to be bonded)
+#       only is atom_possible has more than 1 alternative
+        if len(atom_possible)>1:
+            zaxis_possible = []
+            for j in range(len(atom_possible)):
+                for k in connections[i]:
+                    neigh_type = atom_type[k]
+                    if neigh_type == atom_possible[j][1]:
+                        zaxis_possible.append(atom_possible[j])
+
+#           filter possible multipoles by x axis defining atom (no need to be bonded)
+#           only if zaxis_possible has more than 1 alternative
+            if len(zaxis_possible)>1:
+                neigh_type = []
+                for j in range(len(zaxis_possible)):
+                    neigh_type.append(zaxis_possible[j][2])
+
+                xaxis_possible_atom = []
+                for j in range(N):
+                    if atom_type[j] in neigh_type:
+                        xaxis_possible_atom.append(j)
+
+                dist = numpy.linalg.norm(pos[i,:] - pos[xaxis_possible_atom,:], axis=1)
+
+
+                xaxis_at_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
+                xaxis_at = xaxis_possible_atom[xaxis_at_index]
+
+#               just check if it's not a connection
+                if xaxis_at not in connections[i]:
+#                    print 'For atom %i+1, x axis define atom is %i+1, which is not bonded'%(i,xaxis_at)
+                    for jj in connections[i]:
+                        if jj in xaxis_possible_atom:
+                            print 'For atom %i+1, there was a bonded connnection available for x axis, but was not used'%(i)
+
+                xaxis_type = atom_type[xaxis_at]
+
+                xaxis_possible = []
+                for j in range(len(zaxis_possible)):
+                    if xaxis_type == zaxis_possible[j][2]:
+                        xaxis_possible.append(zaxis_possible[j])
+
+                if len(xaxis_possible)==0:
+                    print 'For atom %i+1 there is no possible multipole'%i
+                if len(xaxis_possible)>1:
+                    print 'For atom %i+1 there is more than 1 possible multipole, use last one'%i
+
+            else:
+                xaxis_possible = zaxis_possible
+
+        else:
+            xaxis_possible = atom_possible
+        
+        q[i] = charge[xaxis_possible[-1]]
+        p[i,:] = dipole[xaxis_possible[-1]]
+        Q[i,:,:] = quadrupole[xaxis_possible[-1]]
         
     return pos, q, p, Q, alpha, N
 
