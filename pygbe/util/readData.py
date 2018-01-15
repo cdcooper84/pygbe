@@ -132,6 +132,7 @@ def read_tinker(filename, REAL):
     alpha = numpy.zeros((N,3,3))
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
+    polar_group = -numpy.ones(N, dtype=int)
     header = 0
     for line in file(file_xyz):
         line = line.split()
@@ -153,6 +154,7 @@ def read_tinker(filename, REAL):
     charge = {}
     dipole = {}
     quadrupole = {}
+    polar_group_list = {}
     multipole_list = []
     multipole_flag = 0
 
@@ -171,6 +173,8 @@ def read_tinker(filename, REAL):
 
             if line[0].lower()=='polarize':
                 polarizability[line[1]] = REAL(line[2])
+                polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
+                polar_group_list[line[1]][:] = line[4:]
 
             if line[0].lower()=='multipole' or (multipole_flag>0 and multipole_flag<5):
 
@@ -205,8 +209,33 @@ def read_tinker(filename, REAL):
 
                 multipole_flag += 1
                 
+    polar_group_counter = 0
     for i in range(N):
+#       Get polarizability
         alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+
+#       Find atom polarization group
+        if polar_group[i]==-1:
+#           Check with connections if there is a group member already assigned
+            for j in connections[i]:
+                if atom_type[j] in polar_group_list[atom_type[i]][:] and polar_group[j]!=-1:
+                    if polar_group[i]==-1:
+                        polar_group[i] = polar_group[j]
+                    elif polar_group[i]!=polar_group[j]:
+                        print 'double polarization group assigment here!'
+#           if no other group members are found, create a new group
+            if polar_group[i]==-1:
+                polar_group[i] = polar_group_counter
+                polar_group_counter += 1
+
+#           Now, assign group number to connections in the same group
+            for j in connections[i]:
+                if atom_type[j] in polar_group_list[atom_type[i]][:]:
+                    if polar_group[j]==-1:
+                        polar_group[j] = polar_group[i]
+                    elif polar_group[j]!=polar_group[i]: 
+                        print 'double polarization group assigment here too!'
+
 
 #       filter possible multipoles by atom type
         atom_possible = []
@@ -271,7 +300,7 @@ def read_tinker(filename, REAL):
         p[i,:] = dipole[xaxis_possible[-1]]
         Q[i,:,:] = quadrupole[xaxis_possible[-1]]
         
-    return pos, q, p, Q, alpha, N
+    return pos, q, p, Q, alpha, polar_group, N
 
 def readpqr(filename, REAL):
 

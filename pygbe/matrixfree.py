@@ -1079,7 +1079,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                             f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
                                             f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                             f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
-                                            f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu,
+                                            f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.polar_group_gpu,
                                             dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                             par_reac.REAL(f.E), numpy.int32(len(f.q)), block=(par_reac.BSZ,1,1), grid=(GSZ,1))
 
@@ -1199,10 +1199,9 @@ def coulomb_polarizable_dipole(f, param, kernel):
             dphiy_reac_gpu = gpuarray.to_gpu(dphiy_reac.astype(param.REAL))
             dphiz_reac_gpu = gpuarray.to_gpu(dphiz_reac.astype(param.REAL))
 
-            p_tot = f.p + f.p_pol
-            f.px_gpu = gpuarray.to_gpu(p_tot[:,0])
-            f.py_gpu = gpuarray.to_gpu(p_tot[:,1])
-            f.pz_gpu = gpuarray.to_gpu(p_tot[:,2])
+            f.px_gpu = gpuarray.to_gpu(f.p[:,0])
+            f.py_gpu = gpuarray.to_gpu(f.p[:,1])
+            f.pz_gpu = gpuarray.to_gpu(f.p[:,2])
 
             compute_induced_dipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu,
                                     f.px_gpu, f.py_gpu, f.pz_gpu, 
@@ -1212,7 +1211,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                     f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
                                     f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                     f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
-                                    f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu,
+                                    f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.polar_group_gpu,
                                     dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                     param.REAL(f.E), numpy.int32(len(f.q)), block=(param.BSZ,1,1), grid=(GSZ,1))
 

@@ -424,6 +424,8 @@ def main(log_output=True):
     
                 print 'Calculate total dipole'
                 ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.q), axis=1)/numpy.sum(numpy.abs(f.q))
+#                ctr = numpy.average(f.xq, axis=0)
+#                ctr = numpy.array([0,0,0])
                 r = f.xq - ctr
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
                 d_dipole = numpy.sum(f.p_pol+f.p, axis=0)

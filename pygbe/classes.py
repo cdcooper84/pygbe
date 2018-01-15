@@ -150,6 +150,8 @@ class fields():
         self.p      = []    # value of dipole
         self.p_pol  = []    # value of dipole
         self.Q      = []    # value of Quadrupole
+        self.alpha  = []    # value of polarizability
+        self.polar_group = [] # Polarization group (from AMOEBA)
         self.coul   = []    # 1: perform Coulomb interaction calculation
                             # 0: don't do Coulomb calculation
 
@@ -179,6 +181,7 @@ class fields():
         self.alphazx_gpu = []   # value of zx polarizability on gpu
         self.alphazy_gpu = []   # value of zy polarizability on gpu
         self.alphazz_gpu = []   # value of zz polarizability on gpu
+        self.polar_group_gpu = [] # Polarization group on gpu
 
 class timings():
     def __init__(self):
@@ -870,7 +873,7 @@ def initializeField(filename, param):
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
-                xq,q,p,Q,alpha,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+                xq,q,p,Q,alpha,polar_group,Nq = read_tinker(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
                 if qfile[i][-4:]=='.crd':
@@ -884,6 +887,7 @@ def initializeField(filename, param):
             field_aux.p = p                                         # dipole values
             field_aux.Q = Q                                         # quadrupole values
             field_aux.alpha = alpha                                 # polarizabilities
+            field_aux.polar_group = polar_group                     # Polarization group
 
             '''
             print xq[:3]
@@ -1038,6 +1042,7 @@ def dataTransfer(surf_array, field_array, ind, param, kernel):
                     field_array[f].alphazx_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,0].astype(REAL))
                     field_array[f].alphazy_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,1].astype(REAL))
                     field_array[f].alphazz_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,2].astype(REAL))
+                    field_array[f].polar_group_gpu  = gpuarray.to_gpu(field_array[f].polar_group[:].astype(numpy.int32))
                     
 
 
