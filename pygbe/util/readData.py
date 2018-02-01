@@ -130,6 +130,7 @@ def read_tinker(filename, REAL):
     p     = numpy.zeros((N,3))
     Q     = numpy.zeros((N,3,3))
     alpha = numpy.zeros((N,3,3))
+    mass  = numpy.zeros(N)
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
     polar_group = -numpy.ones(N, dtype=int)
@@ -150,6 +151,7 @@ def read_tinker(filename, REAL):
         header = 1
 
     atom_class = {}
+    atom_mass = {}
     polarizability = {}
     charge = {}
     dipole = {}
@@ -170,6 +172,7 @@ def read_tinker(filename, REAL):
         if len(line)>0:
             if line[0].lower()=='atom':
                 atom_class[line[1]] = line[2]
+                atom_mass[line[1]] = REAL(line[-2])
 
             if line[0].lower()=='polarize':
                 polarizability[line[1]] = REAL(line[2])
@@ -182,29 +185,50 @@ def read_tinker(filename, REAL):
                     key = line[1]
                     z_axis = line[2]
                     x_axis = line[3]
+
                     if len(line)>5:
                         y_axis = line[4]
                     else:
-                        y_axis = 'NA'
+                        y_axis = '0'
 
-                    multipole_list.append((key, z_axis, x_axis, y_axis))
+                    axis_type = 'z_then_x'
+                    if REAL(z_axis)==0:
+                        axis_type = 'None'
+                    if REAL(z_axis)!=0 and REAL(x_axis)==0: # not implemented yet
+                        axis_type = 'z_only'
+                    if REAL(z_axis)<0 or REAL(x_axis)<0:
+                        axis_type = 'bisector'
+                    if REAL(x_axis)<0 and REAL(y_axis)<0: # not implemented yet
+                        axis_type = 'z_bisect'
+                    if REAL(z_axis)<0 and REAL(x_axis)<0 and REAL(y_axis)<0: # not implemented yet
+                        axis_type = '3_fold'
+                    
+                    # Remove negative defining atom types 
+                    if z_axis[0]=='-': 
+                        z_axis = z_axis[1:]
+                    if x_axis[0]=='-': 
+                        x_axis = x_axis[1:]
+                    if y_axis[0]=='-': 
+                        y_axis = y_axis[1:]
 
-                    charge[(key, z_axis, x_axis, y_axis)] = REAL(line[-1])
+                    multipole_list.append((key, z_axis, x_axis, y_axis, axis_type))
+
+                    charge[(key, z_axis, x_axis, y_axis, axis_type)] = REAL(line[-1])
                 if multipole_flag == 1:
-                    dipole[(key, z_axis, x_axis, y_axis)] = numpy.array([REAL(line[0]), REAL(line[1]), REAL(line[2])]) 
+                    dipole[(key, z_axis, x_axis, y_axis, axis_type)] = numpy.array([REAL(line[0]), REAL(line[1]), REAL(line[2])]) 
                 if multipole_flag == 2:
-                    quadrupole[(key, z_axis, x_axis, y_axis)] = numpy.zeros((3,3))
-                    quadrupole[(key, z_axis, x_axis, y_axis)][0,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)] = numpy.zeros((3,3))
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][0,0] = REAL(line[0])
                 if multipole_flag == 3:
-                    quadrupole[(key, z_axis, x_axis, y_axis)][1,0] = REAL(line[0])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][0,1] = REAL(line[0])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][1,1] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][1,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][0,1] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][1,1] = REAL(line[1])
                 if multipole_flag == 4:
-                    quadrupole[(key, z_axis, x_axis, y_axis)][2,0] = REAL(line[0])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][0,2] = REAL(line[0])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][2,1] = REAL(line[1])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][1,2] = REAL(line[1])
-                    quadrupole[(key, z_axis, x_axis, y_axis)][2,2] = REAL(line[2])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][2,0] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][0,2] = REAL(line[0])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][2,1] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][1,2] = REAL(line[1])
+                    quadrupole[(key, z_axis, x_axis, y_axis, axis_type)][2,2] = REAL(line[2])
                     multipole_flag = -1            
 
                 multipole_flag += 1
@@ -213,6 +237,9 @@ def read_tinker(filename, REAL):
     for i in range(N):
 #       Get polarizability
         alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+
+#       Get mass
+        mass[i] = atom_mass[atom_type[i]]
 
 #       Find atom polarization group
         if polar_group[i]==-1:
@@ -262,7 +289,7 @@ def read_tinker(filename, REAL):
 
                 xaxis_possible_atom = []
                 for j in range(N):
-                    if atom_type[j] in neigh_type:
+                    if atom_type[j] in neigh_type and i!=j:
                         xaxis_possible_atom.append(j)
 
                 dist = numpy.linalg.norm(pos[i,:] - pos[xaxis_possible_atom,:], axis=1)
@@ -296,11 +323,73 @@ def read_tinker(filename, REAL):
         else:
             xaxis_possible = atom_possible
         
-        q[i] = charge[xaxis_possible[-1]]
-        p[i,:] = dipole[xaxis_possible[-1]]
-        Q[i,:,:] = quadrupole[xaxis_possible[-1]]
+        multipole = xaxis_possible[-1]
+
+#       Find local axis
+#       Find z defining atom (needs to be bonded)
+        z_atom = -1
+        for k in connections[i]:
+            neigh_type = atom_type[k]
+            if neigh_type == multipole[1]:
+                if z_atom == -1:
+                    z_atom = k
+                else:
+                    print 'Two (or more) possible z defining atoms for atom %i+1, using the first one'%i
+
+#       Find x defining atom (no need to be bonded)
+        x_atom = -1
+        neigh_type = multipole[2]
+
+        x_possible_atom = []
+        for j in range(N):
+            if atom_type[j] == neigh_type and i != j and j != z_atom:
+                x_possible_atom.append(j)
+
+        dist = numpy.linalg.norm(pos[i,:] - pos[x_possible_atom,:], axis=1)
+
+        x_atom_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
+        x_atom = x_possible_atom[x_atom_index]
+
+#       just check if it's not a connection
+        if x_atom not in connections[i]:
+            for jj in connections[i]:
+                if jj in x_possible_atom and jj!=z_atom:
+                    print 'For atom %i+1, there was a bonded atom that could have been x-defining, but is not'
+
+        r12 = pos[z_atom,:] - pos[i,:]
+        r13 = pos[x_atom,:] - pos[i,:]
+        if multipole[4]=='z_then_x':
+            k_local = r12/numpy.linalg.norm(r12) 
+            i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
+            j_local = numpy.cross(k_local, i_local)
+
+        elif multipole[4]=='bisector':
+            k_local = (r12+r13)/numpy.linalg.norm(r12+r13) 
+            i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
+            j_local = numpy.cross(k_local, i_local)
+           
+#       Assign charge
+        q[i] = charge[multipole]
         
-    return pos, q, p, Q, alpha, polar_group, N
+#       Find rotation matrix
+        A = numpy.identity(3)
+        A[:,0] = i_local
+        A[:,1] = j_local
+        A[:,2] = k_local
+
+#       Assign dipole
+        p[i,:] = numpy.dot(A, dipole[multipole])
+
+#       Assign quadrupole
+        for ii in range(3):
+            for j in range(3):
+                for k in range(3):
+                    for m in range(3):
+                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]
+
+#       Q[i,:,:] = quadrupole[multipole]
+
+    return pos, q, p, Q, alpha, mass, polar_group, N
 
 def readpqr(filename, REAL):
 

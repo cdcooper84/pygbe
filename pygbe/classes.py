@@ -151,6 +151,7 @@ class fields():
         self.p_pol  = []    # value of dipole
         self.Q      = []    # value of Quadrupole
         self.alpha  = []    # value of polarizability
+        self.mass   = []    # atom's mass
         self.polar_group = [] # Polarization group (from AMOEBA)
         self.coul   = []    # 1: perform Coulomb interaction calculation
                             # 0: don't do Coulomb calculation
@@ -873,7 +874,7 @@ def initializeField(filename, param):
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
-                xq,q,p,Q,alpha,polar_group,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+                xq,q,p,Q,alpha,mass,polar_group,Nq = read_tinker(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
                 if qfile[i][-4:]=='.crd':
@@ -888,6 +889,7 @@ def initializeField(filename, param):
             field_aux.Q = Q                                         # quadrupole values
             field_aux.alpha = alpha                                 # polarizabilities
             field_aux.polar_group = polar_group                     # Polarization group
+            field_aux.mass = mass                                   # atom mass values
 
             '''
             print xq[:3]
