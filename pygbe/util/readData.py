@@ -377,17 +377,166 @@ def read_tinker(filename, REAL):
         A[:,1] = j_local
         A[:,2] = k_local
 
+        bohr = 0.52917721067
 #       Assign dipole
-        p[i,:] = numpy.dot(A, dipole[multipole])
+        p[i,:] = numpy.dot(A, dipole[multipole])*bohr
+#        print p[i,:]
+#        print dipole[multipole]*bohr
 
 #       Assign quadrupole
         for ii in range(3):
             for j in range(3):
                 for k in range(3):
                     for m in range(3):
-                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]
+                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2/3.
 
-#       Q[i,:,:] = quadrupole[multipole]
+#        if i==3:
+#            print z_atom, x_atom
+#        print Q[i,:,:]
+
+    return pos, q, p, Q, alpha, mass, polar_group, N
+
+
+def read_tinker_pqr(filename, REAL):
+    """
+    Reads input file from tinker
+    Input:
+    -----
+    filename: (string) file name without xyz or key extension
+    REAL    : (string) precision, double or float
+
+    Returns:
+    -------
+    pos: Nx3 array with position of multipoles
+    q  : array size N with charges (monopoles)
+    p  : array size Nx3 with dipoles
+    Q  : array size Nx3x3 with quadrupoles
+    alpha: array size Nx3x3 with polarizabilities
+            (tinker considers an isotropic value, not tensor)
+    N  : (int) number of multipoles
+    """
+
+    file_xyz = filename+'.xyz'
+    file_key = filename+'.key'
+    file_pqr = filename+'.pqr.tinker' # self generated file with multipoles in global frame
+
+    with open(file_xyz, 'r') as f:
+        N = int(f.readline().split()[0])
+
+    pos   = numpy.zeros((N,3))
+    q     = numpy.zeros(N)
+    p     = numpy.zeros((N,3))
+    Q     = numpy.zeros((N,3,3))
+    alpha = numpy.zeros((N,3,3))
+    mass  = numpy.zeros(N)
+    atom_type  = numpy.chararray(N, itemsize=10)
+    connections = numpy.empty(N, dtype=object)
+    polar_group = -numpy.ones(N, dtype=int)
+    header = 0
+    for line in file(file_xyz):
+        line = line.split()
+
+        if header==1:
+            atom_number = int(line[0])-1
+            pos[atom_number,0] = REAL(line[2])
+            pos[atom_number,1] = REAL(line[3])
+            pos[atom_number,2] = REAL(line[4])
+            atom_type[atom_number] = line[5]
+            connections[atom_number] = numpy.zeros(len(line)-6, dtype=int)
+            for i in range(6, len(line)):
+                connections[atom_number][i-6] = int(line[i]) - 1 
+
+        header = 1
+
+    atom_class = {}
+    atom_mass = {}
+    polarizability = {}
+    polar_group_list = {}
+    multipole_list = []
+    multipole_flag = 0
+
+    with open(file_key, 'r') as f:
+        line = f.readline().split()
+        if line[0]=='parameters':
+            file_key = line[1]
+        print ('Reading parameters from '+file_key)
+
+    for line in file(file_key):
+        line = line.split()
+
+        if len(line)>0:
+            if line[0].lower()=='atom':
+                atom_class[line[1]] = line[2]
+                atom_mass[line[1]] = REAL(line[-2])
+
+            if line[0].lower()=='polarize':
+                polarizability[line[1]] = REAL(line[2])
+                polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
+                polar_group_list[line[1]][:] = line[4:]
+
+    for line_full in file(file_pqr):
+        line_aux = line_full.split()
+        if len(line_aux)<17:
+            line = []
+            for i in range(len(line_aux)):
+                if "-" in line_aux[i][1:]:
+                    word = line_aux[i][1:].split("-")
+                    line.append(line_aux[i][0]+word[0])
+                    for j in range(len(word)-1):
+                        line.append("-"+word[j+1])
+                else:
+                    line.append(line_aux[i])
+        else:
+            line = line_aux
+            
+
+        if len(line)>0:
+            atom_number = int(line[0])-1
+            q[atom_number] = REAL(line[4])
+            p[atom_number,0] = REAL(line[5])
+            p[atom_number,1] = REAL(line[6])
+            p[atom_number,2] = REAL(line[7])
+            Q[atom_number,0,0] = REAL(line[8])
+            Q[atom_number,0,1] = REAL(line[9])
+            Q[atom_number,0,2] = REAL(line[10])
+            Q[atom_number,1,0] = REAL(line[11])
+            Q[atom_number,1,1] = REAL(line[12])
+            Q[atom_number,1,2] = REAL(line[13])
+            Q[atom_number,2,0] = REAL(line[14])
+            Q[atom_number,2,1] = REAL(line[15])
+            Q[atom_number,2,2] = REAL(line[16])
+            
+                
+    polar_group_counter = 0
+    for i in range(N):
+#       Get polarizability
+        alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+
+#       Get mass
+        mass[i] = atom_mass[atom_type[i]]
+
+#       Find atom polarization group
+        if polar_group[i]==-1:
+#           Check with connections if there is a group member already assigned
+            for j in connections[i]:
+                if atom_type[j] in polar_group_list[atom_type[i]][:] and polar_group[j]!=-1:
+                    if polar_group[i]==-1:
+                        polar_group[i] = polar_group[j]
+                    elif polar_group[i]!=polar_group[j]:
+                        print 'double polarization group assigment here!'
+#           if no other group members are found, create a new group
+            if polar_group[i]==-1:
+                polar_group[i] = polar_group_counter
+                polar_group_counter += 1
+
+#           Now, assign group number to connections in the same group
+            for j in connections[i]:
+                if atom_type[j] in polar_group_list[atom_type[i]][:]:
+                    if polar_group[j]==-1:
+                        polar_group[j] = polar_group[i]
+                    elif polar_group[j]!=polar_group[i]: 
+                        print 'double polarization group assigment here too!'
+
 
     return pos, q, p, Q, alpha, mass, polar_group, N
 

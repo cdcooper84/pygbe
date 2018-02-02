@@ -417,31 +417,32 @@ def main(log_output=True):
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
                 E_coul.append(coulombEnergy(f, param, kernel))
 
-                print 'Calculate vacuum induced dipole for region %i'%i
-                f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
-                coulomb_polarizable_dipole(f, param, kernel) 
-                
-                ''' 
-                print 'Calculate total dipole'
-#                ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.q), axis=1)/numpy.sum(numpy.abs(f.q))
-#                ctr = numpy.average(f.xq, axis=0)
-#                ctr = numpy.array([0,0,0])
+                print 'Calculate total dipole in dissolved state'
                 ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.mass), axis=1)/numpy.sum(numpy.abs(f.mass))
                 
 
                 r = f.xq - ctr
-                print ctr, numpy.average(f.xq, axis=0)
-                print r
-                print f.q, numpy.sum(f.q)
-                print ''
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
                 d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
-                print d_charge
-                print d_dipole
-                print numpy.sum(f.p_pol, axis=0)
+                d_total = d_dipole+d_charge
+                print 'Total dipole in dissolved state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*4.8033324, d_total[1]*4.8033324, d_total[2]*4.8033324, numpy.sqrt(numpy.sum(d_total**2))*4.8033324)
+   
+
+                print 'Calculate vacuum induced dipole for region %i'%i
+                f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
+                coulomb_polarizable_dipole(f, param, kernel) 
+                
+    
+                print 'Calculate total dipole in vacuum state'
+                ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.mass), axis=1)/numpy.sum(numpy.abs(f.mass))
+                
+
+                r = f.xq - ctr
+                d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
+                d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
                 d_total = d_dipole+d_charge
                 print 'Total dipole in vacuum state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*4.8033324, d_total[1]*4.8033324, d_total[2]*4.8033324, numpy.sqrt(numpy.sum(d_total**2))*4.8033324)
-                ''' 
+   
    
 
                 print 'Calculate Coulomb energy in vacuum for region %i'%i

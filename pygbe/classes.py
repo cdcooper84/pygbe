@@ -28,7 +28,7 @@ from tree.direct import computeDiagonal
 from util.semi_analytical import GQ_1D
 #from util.triangulation      import *
 from util.readData import (readVertex, readTriangle, readpqr, readcrd,
-                           readFields, readSurf, read_tinker)
+                           readFields, readSurf, read_tinker, read_tinker_pqr)
 
 # PyCUDA libraries
 try:
@@ -875,6 +875,7 @@ def initializeField(filename, param):
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
                 xq,q,p,Q,alpha,mass,polar_group,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+#                xq,q,p,Q,alpha,mass,polar_group,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
                 if qfile[i][-4:]=='.crd':
