@@ -133,7 +133,7 @@ def read_tinker(filename, REAL):
     mass  = numpy.zeros(N)
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
-    polar_group = -numpy.ones(N, dtype=int)
+    polar_group = -numpy.ones(N, dtype=numpy.int32)
     header = 0
     for line in file(file_xyz):
         line = line.split()
@@ -252,7 +252,7 @@ def read_tinker(filename, REAL):
                         print 'double polarization group assigment here!'
 #           if no other group members are found, create a new group
             if polar_group[i]==-1:
-                polar_group[i] = polar_group_counter
+                polar_group[i] = numpy.int32(polar_group_counter)
                 polar_group_counter += 1
 
 #           Now, assign group number to connections in the same group

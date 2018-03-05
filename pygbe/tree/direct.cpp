@@ -1147,14 +1147,65 @@ void coulomb_phi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL
     }
 }
 
+void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
+                                  REAL *alpha, REAL dphi[][3], int N)
+{
+	REAL r, r3, r5, lambda1, lambda2;
+	REAL eps = 1e-15;
+	REAL T1[3], Ri[3], sum[3];
+	REAL dkl, dkm;
+	REAL a = 0.572; // Thole damping factor
+	REAL u;
+
+    for (int i=0; i<N; i++)
+    {
+        sum[0] = 0;
+        sum[1] = 0;
+        sum[2] = 0;
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j];
+            Ri[1] = yt[i] - yt[j];
+            Ri[2] = zt[i] - zt[j];
+
+            r  = 1./sqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+            r3 = r*r*r;
+            r5 = r3*r*r;
+
+            u = r * pow((alpha[i]*alpha[j]),-0.166666666666);
+            lambda1 = 1 - exp(-a*u*u*u);
+            lambda2 = 1 - (1 + a*u*u*u)*exp(-a*u*u*u);
+
+            if (r<1e12)
+            {
+                for (int k=0; k<3; k++)
+                {
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+                        T1[l] = lambda1*dkl*r3 - lambda2*3*Ri[k]*Ri[l]*r5;
+                    }
+
+                    sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+                }
+            }
+        }
+        dphi[i][0] += sum[0];
+        dphi[i][1] += sum[1];
+        dphi[i][2] += sum[2];
+    }
+}
+
 void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
                         REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
-                        REAL *Qzx, REAL *Qzy, REAL *Qzz, REAL dphi[][3], int N)
+                        REAL *Qzx, REAL *Qzy, REAL *Qzz, int *polar_group, bool flag_polar_group, 
+                        REAL dphi[][3], int N)
 {
     REAL Ri[3], Rnorm, R3, R5, R7, sum[3];
     REAL T0, T1[3], T2[3][3];
     REAL dkl, dkm;
     REAL eps = 1e-15;
+    bool not_same_polar_group;
 
     for (int i=0; i<N; i++)
     {
@@ -1171,7 +1222,15 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
             R5 = R3*Rnorm*Rnorm;
             R7 = R5*Rnorm*Rnorm;
             
-            if (Rnorm>1e-12) //remove singularity
+            if (flag_polar_group==false)
+                not_same_polar_group = true;
+            else
+                if (polar_group[i]!=polar_group[j])
+                    not_same_polar_group = true;
+                else
+                    not_same_polar_group = false;
+
+            if ((Rnorm>1e-12) && (not_same_polar_group==true)) //remove singularity
             {
                 for (int k=0; k<3; k++)
                 {
@@ -1307,12 +1366,15 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
         ddphi[i][2][2] = 0.0;
     }
 
+    bool flag_polar_group = false;
+    int *dummy;
+
     coulomb_phi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, phi, xtSize);
     coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
-                           Qzx, Qzy, Qzz, dphi, xtSize);
+                           Qzx, Qzy, Qzz, dummy, flag_polar_group, dphi, xtSize);
     coulomb_ddphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, ddphi, xtSize);
@@ -1338,8 +1400,8 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                         REAL *alphaxx, int alphaxxSize, REAL *alphaxy, int alphaxySize, REAL *alphaxz, int alphaxzSize, 
                         REAL *alphayx, int alphayxSize, REAL *alphayy, int alphayySize, REAL *alphayz, int alphayzSize, 
                         REAL *alphazx, int alphazxSize, REAL *alphazy, int alphazySize, REAL *alphazz, int alphazzSize, 
-                        REAL *dphix_reac, int dphix_reacSize, REAL *dphiy_reac, int dphiy_reacSize, 
-                        REAL *dphiz_reac, int dphiz_reacSize, double E)
+                        int *polar_group, int polar_groupSize, REAL *dphix_reac, int dphix_reacSize, 
+                        REAL *dphiy_reac, int dphiy_reacSize, REAL *dphiz_reac, int dphiz_reacSize, double E)
 {
     double dphi_coul [xtSize][3];
     double px_tot[xtSize], py_tot[xtSize], pz_tot[xtSize];
@@ -1354,10 +1416,15 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
         dphi_coul[i][2] =  0.0;
     }
 
+    bool flag_polar_group = true; 
+
     // Compute derivative of phi (negative of electric field)
-    coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
-                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
-                           Qzx, Qzy, Qzz, dphi_coul, xtSize);
+    coulomb_dphi_multipole(xt, yt, zt, q, px, py, pz,
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz, 
+                           polar_group, flag_polar_group, dphi_coul, xtSize);
+
+    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, dphi_coul, xtSize);
+
 
     // p_pol = -grad(phi)
     // Note: dphi_reac is a field different from coulomb (reaction field due to solvent)
