@@ -23,6 +23,7 @@
 #include <cmath>
 #include <stdio.h>
 #include <iostream>
+#include <algorithm>
 #include <sys/time.h>
 #define REAL double
 
@@ -1198,7 +1199,7 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
 
 void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
                         REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
-                        REAL *Qzx, REAL *Qzy, REAL *Qzz, int *polar_group, bool flag_polar_group, 
+                        REAL *Qzx, REAL *Qzy, REAL *Qzz,  REAL *alpha, REAL *thole, int *polar_group, bool flag_polar_group, 
                         REAL dphi[][3], int N)
 {
     REAL Ri[3], Rnorm, R3, R5, R7, sum[3];
@@ -1206,6 +1207,10 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
     REAL dkl, dkm;
     REAL eps = 1e-15;
     bool not_same_polar_group;
+    REAL scale3 = 1.0;
+    REAL scale5 = 1.0;
+    REAL scale7 = 1.0;
+    REAL damp, gamma, expdamp;
 
     for (int i=0; i<N; i++)
     {
@@ -1223,35 +1228,52 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
             R7 = R5*Rnorm*Rnorm;
             
             if (flag_polar_group==false)
+            {
                 not_same_polar_group = true;
+            }
             else
+            {
+                gamma = std::min(thole[i], thole[j]);
+                damp = pow(alpha[i]*alpha[j],0.16666667);
+                damp = -gamma*(R3/(damp*damp*damp));
+                expdamp = exp(damp);
+                scale3 = 1 - expdamp;
+                scale5 = 1 - expdamp*(1-damp);
+                scale7 = 1 - expdamp*(1-damp+0.6*damp*damp);
                 if (polar_group[i]!=polar_group[j])
+                {
                     not_same_polar_group = true;
+                }
                 else
+                {
                     not_same_polar_group = false;
+                }
+            }
 
             if ((Rnorm>1e-12) && (not_same_polar_group==true)) //remove singularity
             {
                 for (int k=0; k<3; k++)
                 {
-                    T0 = -Ri[k]/R3;
+                    T0 = -Ri[k]/R3 * scale3;
                     for (int l=0; l<3; l++)
                     {
                         dkl = (REAL)(k==l);
-                        T1[l] = dkl/R3 - 3*Ri[k]*Ri[l]/R5;
+                        T1[l] = dkl/R3 * scale3 - 3*Ri[k]*Ri[l]/R5 * scale5;
                         for (int m=0; m<3; m++)
                         {
                             dkm = (REAL)(k==m);
-                            T2[l][m] = (dkm*Ri[l]+dkl*Ri[m])/R5 - 5*Ri[l]*Ri[m]*Ri[k]/R7;
+                            T2[l][m] = (dkm*Ri[l]+dkl*Ri[m])/R5 * scale5 - 5*Ri[l]*Ri[m]*Ri[k]/R7 * scale7;
                         }
                     }
 
                     sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
-                           + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                           + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]   // OJO x6
                                 + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
                                 + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
                 }                          
             }
+            
+           
         }
         dphi[i][0] += sum[0];
         dphi[i][1] += sum[1];
@@ -1368,13 +1390,14 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
 
     bool flag_polar_group = false;
     int *dummy;
+    double *dummy2;
 
     coulomb_phi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, phi, xtSize);
     coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
-                           Qzx, Qzy, Qzz, dummy, flag_polar_group, dphi, xtSize);
+                           Qzx, Qzy, Qzz, dummy2, dummy2, dummy, flag_polar_group, dphi, xtSize);
     coulomb_ddphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, ddphi, xtSize);
@@ -1400,7 +1423,7 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                         REAL *alphaxx, int alphaxxSize, REAL *alphaxy, int alphaxySize, REAL *alphaxz, int alphaxzSize, 
                         REAL *alphayx, int alphayxSize, REAL *alphayy, int alphayySize, REAL *alphayz, int alphayzSize, 
                         REAL *alphazx, int alphazxSize, REAL *alphazy, int alphazySize, REAL *alphazz, int alphazzSize, 
-                        int *polar_group, int polar_groupSize, REAL *dphix_reac, int dphix_reacSize, 
+                        REAL *thole, int tholeSize, int *polar_group, int polar_groupSize, REAL *dphix_reac, int dphix_reacSize, 
                         REAL *dphiy_reac, int dphiy_reacSize, REAL *dphiz_reac, int dphiz_reacSize, double E)
 {
     double dphi_coul [xtSize][3];
@@ -1420,26 +1443,31 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
 
     // Compute derivative of phi (negative of electric field)
     coulomb_dphi_multipole(xt, yt, zt, q, px, py, pz,
-                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz, 
-                           polar_group, flag_polar_group, dphi_coul, xtSize);
+                           Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz, alphaxx, 
+                           thole, polar_group, flag_polar_group, dphi_coul, xtSize);
 
     coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, dphi_coul, xtSize);
 
-
-    // p_pol = -grad(phi)
-    // Note: dphi_reac is a field different from coulomb (reaction field due to solvent)
-    //       if dphi_reac = 0,0,0, then this computes the induced dipole in vacuum.
     for (int i=0; i<xtSize; i++)
     {
-        px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
-                     -alphaxy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
-                     -alphaxz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
-        py_pol[i] = (-alphayx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
-                     -alphayy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
-                     -alphayz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
-        pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
-                     -alphazy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
-                     -alphazz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        //px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+        //             -alphaxy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+        //             -alphaxz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        //py_pol[i] = (-alphayx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+        //             -alphayy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+        //             -alphayz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        //pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
+        //             -alphazy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
+        //             -alphazz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
+        px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+                     -alphaxy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
+                     -alphaxz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
+        py_pol[i] = (-alphayx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+                     -alphayy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
+                     -alphayz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
+        pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+                     -alphazy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
+                     -alphazz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
     }
     
 }

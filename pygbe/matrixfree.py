@@ -1057,7 +1057,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                            f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
                                            f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
                                            f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
-                                           f.polar_group, dphix_reac, dphiy_reac, dphiz_reac, f.E)
+                                           f.thole, f.polar_group, dphix_reac, dphiy_reac, dphiz_reac, f.E)
 
                 elif par_reac.GPU==1:
                     GSZ = int(numpy.ceil(float(len(f.q))/par_reac.BSZ)) # CUDA grid size
@@ -1079,7 +1079,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                             f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
                                             f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                             f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
-                                            f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.polar_group_gpu,
+                                            f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.thole_gpu, f.polar_group_gpu,
                                             dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                             par_reac.REAL(f.E), numpy.int32(len(f.q)), block=(par_reac.BSZ,1,1), grid=(GSZ,1))
 
@@ -1190,7 +1190,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                    f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
                                    f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
                                    f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
-                                   numpy.int32(f.polar_group), dphix_reac, dphiy_reac, dphiz_reac, f.E)
+                                   f.thole, numpy.int32(f.polar_group), dphix_reac, dphiy_reac, dphiz_reac, f.E)
         elif param.GPU==1:
             GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
             compute_induced_dipole_gpu = kernel.get_function("compute_induced_dipole")
@@ -1211,7 +1211,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                     f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
                                     f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                     f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
-                                    f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.polar_group_gpu,
+                                    f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.thole_gpu, f.polar_group_gpu,
                                     dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                     param.REAL(f.E), numpy.int32(len(f.q)), block=(param.BSZ,1,1), grid=(GSZ,1))
 

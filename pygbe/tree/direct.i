@@ -79,7 +79,7 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
                         double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
-                        int *polar_group, int polar_groupSize, 
+                        double *thole, int tholeSize, int *polar_group, int polar_groupSize, 
                         double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %}
@@ -172,6 +172,7 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *alphazx, int alphazxSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *alphazy, int alphazySize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *alphazz, int alphazzSize)};
+%apply (double* IN_ARRAY1, int DIM1){(double *thole, int tholeSize)};
 %apply (int* IN_ARRAY1, int DIM1){(int *polar_group, int polar_groupSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mKc, int mKcSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mVc, int mVcSize)};
@@ -260,7 +261,7 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *alphaxx, int alphaxxSize, double *alphaxy, int alphaxySize, double *alphaxz, int alphaxzSize, 
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
                         double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
-                        int *polar_group, int polar_groupSize, 
+                        double *thole, int tholeSize, int *polar_group, int polar_groupSize, 
                         double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %clear (double *K_aux, int K_auxSize); 
@@ -346,6 +347,7 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
 %clear (double *alphazx, int alphazxSize); 
 %clear (double *alphazy, int alphazySize); 
 %clear (double *alphazz, int alphazzSize);
+%clear (double *thole, int tholeSize);
 %clear (int *polar_group, int polar_groupSize);
 %clear (double *mKc, int mKcSize);
 %clear (double *mVc, int mVcSize);

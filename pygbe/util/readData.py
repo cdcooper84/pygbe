@@ -130,6 +130,7 @@ def read_tinker(filename, REAL):
     p     = numpy.zeros((N,3))
     Q     = numpy.zeros((N,3,3))
     alpha = numpy.zeros((N,3,3))
+    thole = numpy.zeros(N)
     mass  = numpy.zeros(N)
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
@@ -153,6 +154,7 @@ def read_tinker(filename, REAL):
     atom_class = {}
     atom_mass = {}
     polarizability = {}
+    thole_factor = {}
     charge = {}
     dipole = {}
     quadrupole = {}
@@ -176,6 +178,7 @@ def read_tinker(filename, REAL):
 
             if line[0].lower()=='polarize':
                 polarizability[line[1]] = REAL(line[2])
+                thole_factor[line[1]] = REAL(line[3])
                 polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
                 polar_group_list[line[1]][:] = line[4:]
 
@@ -237,6 +240,9 @@ def read_tinker(filename, REAL):
     for i in range(N):
 #       Get polarizability
         alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
+
+#       Get Thole factor
+        thole[i] = thole_factor[atom_type[i]]
 
 #       Get mass
         mass[i] = atom_mass[atom_type[i]]
@@ -394,7 +400,7 @@ def read_tinker(filename, REAL):
 #            print z_atom, x_atom
 #        print Q[i,:,:]
 
-    return pos, q, p, Q, alpha, mass, polar_group, N
+    return pos, q, p, Q, alpha, mass, polar_group, thole, N
 
 
 def read_tinker_pqr(filename, REAL):
@@ -428,6 +434,7 @@ def read_tinker_pqr(filename, REAL):
     p     = numpy.zeros((N,3))
     Q     = numpy.zeros((N,3,3))
     alpha = numpy.zeros((N,3,3))
+    thole = numpy.zeros(N)
     mass  = numpy.zeros(N)
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
@@ -451,6 +458,7 @@ def read_tinker_pqr(filename, REAL):
     atom_class = {}
     atom_mass = {}
     polarizability = {}
+    thole_factor = {}
     polar_group_list = {}
     multipole_list = []
     multipole_flag = 0
@@ -471,6 +479,7 @@ def read_tinker_pqr(filename, REAL):
 
             if line[0].lower()=='polarize':
                 polarizability[line[1]] = REAL(line[2])
+                thole_factor[line[1]] = REAL(line[3])
                 polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
                 polar_group_list[line[1]][:] = line[4:]
 
@@ -512,6 +521,9 @@ def read_tinker_pqr(filename, REAL):
 #       Get polarizability
         alpha[i,:,:] = numpy.identity(3)*polarizability[atom_type[i]]
 
+#       Get Thole factor
+        thole[i] = thole_factor[atom_type[i]]
+
 #       Get mass
         mass[i] = atom_mass[atom_type[i]]
 
@@ -538,7 +550,7 @@ def read_tinker_pqr(filename, REAL):
                         print 'double polarization group assigment here too!'
 
 
-    return pos, q, p, Q, alpha, mass, polar_group, N
+    return pos, q, p, Q, alpha, mass, polar_group, thole, N
 
 def readpqr(filename, REAL):
 
