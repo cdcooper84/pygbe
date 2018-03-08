@@ -3174,7 +3174,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                 }
 
                 sum += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
-                    + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
+                    + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
                          + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
                          + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
             }
@@ -3185,7 +3185,8 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
     __device__ void coulomb_dphi_multipole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, REAL *q,
                                       REAL *px, REAL *py, REAL *pz, REAL *Qxx, REAL *Qxy, REAL *Qxz,
                                       REAL *Qyx, REAL *Qyy, REAL *Qyz, REAL *Qzx, REAL *Qzy, REAL *Qzz, 
-                                      REAL *thole, REAL local_thole, REAL *alpha, REAL alpha_local, int *polar_group, int local_polar_group, REAL &dphix_coul, 
+                                      REAL *thole, REAL thole_local, REAL *alpha, REAL alpha_local, 
+									  int *polar_group, int local_polar_group, REAL &dphix_coul, 
                                       REAL &dphiy_coul, REAL &dphiz_coul, int size)
     {
         REAL r, r3, r5, r7;
@@ -3217,7 +3218,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             }
             else
             {
-                gamma = min(local_thole, thole[j]);
+                gamma = min(thole_local, thole[j]);
                 damp = pow(alpha_local*alpha[j],0.16666667);
                 damp = -gamma*(1/(r3*damp*damp*damp));
                 expdamp = exp(damp);
@@ -3258,15 +3259,17 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
     }    
 
     __device__ void coulomb_dphi_dipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
-                                                    REAL *px, REAL *py, REAL *pz, REAL alpha_local, REAL *alpha,
+                                                    REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local,
+													REAL *thole, REAL thole_local,
                                                     REAL &dphix_coul, REAL &dphiy_coul, REAL &dphiz_coul, int size)
     {
-        REAL r, r3, r5, lambda1, lambda2;
+        REAL r, r3, r5;
         REAL eps = 1e-15;
         REAL T1[3], Ri[3], sum[3];
         REAL dkl, dkm;
-        REAL a = 0.572; // Thole damping factor
-        REAL u;
+		REAL scale3 = 1.0; 
+		REAL scale5 = 1.0; 
+		REAL damp, gamma, expdamp;
 
         sum[0] = 0;
         sum[1] = 0;
@@ -3280,9 +3283,12 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             r3 = r*r*r;
             r5 = r3*r*r;
 
-            u = r * pow((alpha_local*alpha[j]),-0.166666666666);
-            lambda1 = 1 - exp(-a*u*u*u);
-            lambda2 = 1 - (1 + a*u*u*u)*exp(-a*u*u*u);
+            gamma = min(thole_local, thole[j]);
+            damp = pow(alpha_local*alpha[j],0.16666667);
+            damp = -gamma*(1/(r3*damp*damp*damp));
+            expdamp = exp(damp);
+            scale3 = 1 - expdamp;
+            scale5 = 1 - expdamp*(1-damp);
 
             if (r<1e12)
             {
@@ -3291,7 +3297,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                     for (int l=0; l<3; l++)
                     {
                         dkl = (REAL)(k==l);
-                        T1[l] = lambda1*dkl*r3 - lambda2*3*Ri[k]*Ri[l]*r5;
+                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
                     }
 
                     sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -3363,7 +3369,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                         }
 
                         sum[k][l] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
-                                   + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
+                                   + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
                                         + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
                                         + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
                     }
@@ -3411,7 +3417,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         y = yq[I];
         z = zq[I];
         alpha_local = alphaxx[I]; // Using alphaxx because it is usually a scalar (not tensor)
-		REAL local_thole = thole[I];
+		REAL thole_local = thole[I];
 
         int local_polar_group = polar_group[I];
 
@@ -3447,14 +3453,14 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                 // Polarization due to permanent multipoles only
                 coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
                                         px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
-                                        Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, thole_sh, local_thole,
+                                        Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, thole_sh, thole_local,
                                         alpha_sh, alpha_local, polar_group_sh, local_polar_group, dphix_coul, dphiy_coul, 
                                         dphiz_coul, BSZ);
 
                 // Polarization due to induced dipoles only
                 coulomb_dphi_dipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                                 px_pol_sh, py_pol_sh, pz_pol_sh, 
-                                                alpha_local, alpha_sh,
+                                                alpha_sh, alpha_local, thole_sh, thole_local,
                                                 dphix_coul, dphiy_coul, dphiz_coul, BSZ);
             }
         }
@@ -3489,29 +3495,33 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             // Polarization due to permanent multipoles only
             coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
                                     px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
-                                    Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, thole_sh, local_thole,
+                                    Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, thole_sh, thole_local,
                                     alpha_sh, alpha_local, polar_group_sh, local_polar_group, dphix_coul, dphiy_coul, 
                                     dphiz_coul, (Nq-block*BSZ));
 
             // Polarization due to induced dipoles only
             coulomb_dphi_dipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                             px_pol_sh, py_pol_sh, pz_pol_sh, 
-                                            alpha_local, alpha_sh,
+                                            alpha_sh, alpha_local, thole_sh, thole_local,
                                             dphix_coul, dphiy_coul, dphiz_coul, (Nq-block*BSZ));
         }
 
         __syncthreads();
+		REAL SOR = 0.7;
         if (I<Nq)
         {
-            px_pol[I] = (-alphaxx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
+            px_pol[I] = px_pol[I]*(1-SOR) + 
+					    (-alphaxx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
                          -alphaxy[I]*(dphiy_coul/(E)+4*M_PI*dphiy_reac[I]) 
-                         -alphaxz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]));
-            py_pol[I] = (-alphayx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
+                         -alphaxz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]))*SOR;
+            py_pol[I] = py_pol[I]*(1-SOR) + 
+						(-alphayx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
                          -alphayy[I]*(dphiy_coul/(E)+4*M_PI*dphiy_reac[I]) 
-                         -alphayz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]));
-            pz_pol[I] = (-alphazx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
+                         -alphayz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]))*SOR;
+            pz_pol[I] = pz_pol[I]*(1-SOR) + 
+						(-alphazx[I]*(dphix_coul/(E)+4*M_PI*dphix_reac[I]) 
                          -alphazy[I]*(dphiy_coul/(E)+4*M_PI*dphiy_reac[I]) 
-                         -alphazz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]));
+                         -alphazz[I]*(dphiz_coul/(E)+4*M_PI*dphiz_reac[I]))*SOR;
 
         }
     }

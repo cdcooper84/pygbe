@@ -1149,14 +1149,15 @@ void coulomb_phi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL
 }
 
 void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
-                                  REAL *alpha, REAL dphi[][3], int N)
+                                  REAL *alpha, REAL *thole, REAL dphi[][3], int N)
 {
-	REAL r, r3, r5, lambda1, lambda2;
+	REAL r, r3, r5;
 	REAL eps = 1e-15;
 	REAL T1[3], Ri[3], sum[3];
 	REAL dkl, dkm;
-	REAL a = 0.572; // Thole damping factor
-	REAL u;
+    REAL scale3 = 1.0;
+    REAL scale5 = 1.0;
+    REAL damp, gamma, expdamp;
 
     for (int i=0; i<N; i++)
     {
@@ -1173,9 +1174,12 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
             r3 = r*r*r;
             r5 = r3*r*r;
 
-            u = r * pow((alpha[i]*alpha[j]),-0.166666666666);
-            lambda1 = 1 - exp(-a*u*u*u);
-            lambda2 = 1 - (1 + a*u*u*u)*exp(-a*u*u*u);
+            gamma = std::min(thole[i], thole[j]);
+            damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp = -gamma*(1/(r3*damp*damp*damp));
+            expdamp = exp(damp);
+            scale3 = 1 - expdamp;
+            scale5 = 1 - expdamp*(1-damp);
 
             if (r<1e12)
             {
@@ -1184,7 +1188,7 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
                     for (int l=0; l<3; l++)
                     {
                         dkl = (REAL)(k==l);
-                        T1[l] = lambda1*dkl*r3 - lambda2*3*Ri[k]*Ri[l]*r5;
+                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
                     }
 
                     sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -1446,8 +1450,9 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz, alphaxx, 
                            thole, polar_group, flag_polar_group, dphi_coul, xtSize);
 
-    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, dphi_coul, xtSize);
+    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, dphi_coul, xtSize);
 
+    double SOR = 0.7;
     for (int i=0; i<xtSize; i++)
     {
         //px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
@@ -1459,16 +1464,21 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
         //pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/(4*M_PI*E)+dphix_reac[i]) 
         //             -alphazy[i]*(dphi_coul[i][1]/(4*M_PI*E)+dphiy_reac[i]) 
         //             -alphazz[i]*(dphi_coul[i][2]/(4*M_PI*E)+dphiz_reac[i]));
-        px_pol[i] = (-alphaxx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+        px_pol[i] = px_pol[i]*(1-SOR) + 
+                    (-alphaxx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
                      -alphaxy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
-                     -alphaxz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
-        py_pol[i] = (-alphayx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+                     -alphaxz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]))*SOR;
+        py_pol[i] = py_pol[i]*(1-SOR) + 
+                    (-alphayx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
                      -alphayy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
-                     -alphayz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
-        pz_pol[i] = (-alphazx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
+                     -alphayz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]))*SOR;
+        pz_pol[i] = pz_pol[i]*(1-SOR) + 
+                    (-alphazx[i]*(dphi_coul[i][0]/E+4*M_PI*dphix_reac[i]) 
                      -alphazy[i]*(dphi_coul[i][1]/E+4*M_PI*dphiy_reac[i]) 
-                     -alphazz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]));
+                     -alphazz[i]*(dphi_coul[i][2]/E+4*M_PI*dphiz_reac[i]))*SOR;
     }
+    //for (int i=0; i<10; i++) printf("%f, %f, %f\n", dphi_coul[i][0], dphi_coul[i][1], dphi_coul[i][2]);
+    //printf("\n");
     
 }
 

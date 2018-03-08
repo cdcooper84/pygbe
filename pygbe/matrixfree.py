@@ -1177,7 +1177,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
     dphiy_reac = numpy.zeros(len(f.xq))
     dphiz_reac = numpy.zeros(len(f.xq))
 
-    while dipole_diff>1e-10:
+    while dipole_diff>1e-3:
         iteration += 1
         
         if param.GPU==0:
@@ -1226,6 +1226,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
 
         dipole_diff = numpy.sqrt(numpy.sum((numpy.linalg.norm(p_pol_prev-f.p_pol,axis=1))**2)/len(f.p_pol))
         p_pol_prev = f.p_pol.copy()
+        print 'Dipole residual in vacuum in iteration %i: %s'%(iteration, dipole_diff)
 
     print '%i iterations for vacuum induced dipole to converge'%iteration
 

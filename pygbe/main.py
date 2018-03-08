@@ -298,7 +298,7 @@ def main(log_output=True):
         computeIndices(par_reac.P, ind_reac)
         precomputeTerms(par_reac.P, ind_reac)
 
-        while dipole_diff>1e-1:
+        while dipole_diff>1e-3:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration
             print 'Generate RHS'
@@ -414,6 +414,7 @@ def main(log_output=True):
         i += 1
         if f.coulomb == 1:
             if param.args.polarizable:
+                to_debye = to_debye 
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
                 E_coul.append(coulombEnergy(f, param, kernel))
 
@@ -425,7 +426,7 @@ def main(log_output=True):
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
                 d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
                 d_total = d_dipole+d_charge
-                print 'Total dipole in dissolved state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*4.8033324, d_total[1]*4.8033324, d_total[2]*4.8033324, numpy.sqrt(numpy.sum(d_total**2))*4.8033324)
+                print 'Total dipole in dissolved state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*to_debye, d_total[1]*to_debye, d_total[2]*to_debye, numpy.sqrt(numpy.sum(d_total**2))*to_debye)
    
 
                 print 'Calculate vacuum induced dipole for region %i'%i
@@ -441,7 +442,7 @@ def main(log_output=True):
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
                 d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
                 d_total = d_dipole+d_charge
-                print 'Total dipole in vacuum state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*4.8033324, d_total[1]*4.8033324, d_total[2]*4.8033324, numpy.sqrt(numpy.sum(d_total**2))*4.8033324)
+                print 'Total dipole in vacuum state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*to_debye, d_total[1]*to_debye, d_total[2]*to_debye, numpy.sqrt(numpy.sum(d_total**2))*to_debye)
    
    
 
