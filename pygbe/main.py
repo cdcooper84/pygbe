@@ -414,7 +414,7 @@ def main(log_output=True):
         i += 1
         if f.coulomb == 1:
             if param.args.polarizable:
-                to_debye = to_debye 
+                to_debye = 1/0.20819434 
                 print 'Calculate Coulomb energy in dissolved state for region %i'%i
                 E_coul.append(coulombEnergy(f, param, kernel))
 
