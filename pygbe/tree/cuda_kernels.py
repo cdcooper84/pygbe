@@ -2950,9 +2950,10 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                         r2 = dx*dx + dy*dy + dz*dz;
                         r  = sqrt(r2);
 
-                        sum += (Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
+                        sum += 6*(Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
                                +Qyx_sh[i]*dy*dx + Qyy_sh[i]*dy*dy + Qyz_sh[i]*dy*dz 
                                +Qzx_sh[i]*dz*dx + Qzy_sh[i]*dz*dy + Qzz_sh[i]*dz*dz)/(2*r2*r2*r*E_1);
+                                // OJO x6!!
                                
                     }
                 }
@@ -2984,9 +2985,10 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                     r2 = dx*dx + dy*dy + dz*dz;
                     r  = sqrt(r2);
 
-                    sum += (Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
+                    sum += 6*(Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
                            +Qyx_sh[i]*dy*dx + Qyy_sh[i]*dy*dy + Qyz_sh[i]*dy*dz 
                            +Qzx_sh[i]*dz*dx + Qzy_sh[i]*dz*dy + Qzz_sh[i]*dz*dz)/(2*r2*r2*r*E_1);
+                            // OJO x6!!
                 }
             }
 
@@ -3542,7 +3544,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         REAL ddphizx_coul = 0, ddphizy_coul = 0, ddphizz_coul = 0;
         REAL dx, dy, dz, r, eps = 1e-16;
         __shared__ REAL xq_sh[BSZ], yq_sh[BSZ], zq_sh[BSZ], q_sh[BSZ];
-        __shared__ REAL px_sh[BSZ], py_sh[BSZ], pz_sh[BSZ];
+        __shared__ REAL pxt_sh[BSZ], pyt_sh[BSZ], pzt_sh[BSZ];
         __shared__ REAL Qxx_sh[BSZ], Qxy_sh[BSZ], Qxz_sh[BSZ];
         __shared__ REAL Qyx_sh[BSZ], Qyy_sh[BSZ], Qyz_sh[BSZ];
         __shared__ REAL Qzx_sh[BSZ], Qzy_sh[BSZ], Qzz_sh[BSZ];
@@ -3560,9 +3562,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
             zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
             q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
-            px_sh[threadIdx.x] = px[block*BSZ+threadIdx.x];
-            py_sh[threadIdx.x] = py[block*BSZ+threadIdx.x];
-            pz_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x];
+            pxt_sh[threadIdx.x] = px[block*BSZ+threadIdx.x] + px_pol[block*BSZ+threadIdx.x];
+            pyt_sh[threadIdx.x] = py[block*BSZ+threadIdx.x] + py_pol[block*BSZ+threadIdx.x];
+            pzt_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x] + pz_pol[block*BSZ+threadIdx.x];
             Qxx_sh[threadIdx.x] = Qxx[block*BSZ+threadIdx.x];
             Qxy_sh[threadIdx.x] = Qxy[block*BSZ+threadIdx.x];
             Qxz_sh[threadIdx.x] = Qxz[block*BSZ+threadIdx.x];
@@ -3577,18 +3579,18 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             if (I<Nq)
             {
                 coulomb_phi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                         phi_coul, BSZ);
 
                 coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, 
 										dummy2, 1.0, dummy2, 1.0, dummy, -1,
                                         dphix_coul, dphiy_coul, dphiz_coul, BSZ);
 
                 coulomb_ddphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                         ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                         ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
@@ -3602,9 +3604,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
         zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
         q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
-        px_sh[threadIdx.x] = px[block*BSZ+threadIdx.x];
-        py_sh[threadIdx.x] = py[block*BSZ+threadIdx.x];
-        pz_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x];
+        pxt_sh[threadIdx.x] = px[block*BSZ+threadIdx.x] + px_pol[block*BSZ+threadIdx.x];
+        pyt_sh[threadIdx.x] = py[block*BSZ+threadIdx.x] + py_pol[block*BSZ+threadIdx.x];
+        pzt_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x] + pz_pol[block*BSZ+threadIdx.x];
         Qxx_sh[threadIdx.x] = Qxx[block*BSZ+threadIdx.x];
         Qxy_sh[threadIdx.x] = Qxy[block*BSZ+threadIdx.x];
         Qxz_sh[threadIdx.x] = Qxz[block*BSZ+threadIdx.x];
@@ -3619,18 +3621,18 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         if (I<Nq)
         {
             coulomb_phi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                     phi_coul, (Nq-block*BSZ));
 
             coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, 
 									dummy2, 1.0, dummy2, 1.0, dummy, -1,
                                     dphix_coul, dphiy_coul, dphiz_coul, (Nq-block*BSZ));
 
             coulomb_ddphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                     ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                     ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
@@ -3640,7 +3642,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         if (I<Nq)
         {
             point_energy[I] = (q[I]*phi_coul
-                      + (px[I]-px_pol[I])*dphix_coul + (py[I]-py_pol[I])*dphiy_coul + (pz[I]-pz_pol[I])*dphiz_coul
+                      + px[I]*dphix_coul + py[I]*dphiy_coul + pz[I]*dphiz_coul
                       +(Qxx[I]*ddphixx_coul + Qxy[I]*ddphixy_coul + Qxz[I]*ddphixz_coul
                       + Qxy[I]*ddphiyx_coul + Qyy[I]*ddphiyy_coul + Qyz[I]*ddphiyz_coul
                       + Qxz[I]*ddphizx_coul + Qzy[I]*ddphizy_coul + Qzz[I]*ddphizz_coul)/6.);

@@ -1431,13 +1431,9 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                         REAL *dphiy_reac, int dphiy_reacSize, REAL *dphiz_reac, int dphiz_reacSize, double E)
 {
     double dphi_coul [xtSize][3];
-    double px_tot[xtSize], py_tot[xtSize], pz_tot[xtSize];
     
     for (int i=0; i<xtSize; i++)
     {
-        px_tot[i] = px[i] + px_pol[i];
-        py_tot[i] = py[i] + py_pol[i];
-        pz_tot[i] = pz[i] + pz_pol[i];
         dphi_coul[i][0] =  0.0;
         dphi_coul[i][1] =  0.0;
         dphi_coul[i][2] =  0.0;

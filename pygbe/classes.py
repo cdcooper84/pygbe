@@ -162,9 +162,9 @@ class fields():
         self.yq_gpu = []    # y position of charges on gpu
         self.zq_gpu = []    # z position of charges on gpu
         self.q_gpu  = []    # value of charges on gpu
-        self.px_gpu = []    # value of x dipole on gpu
-        self.py_gpu = []    # value of y dipole on gpu
-        self.pz_gpu = []    # value of z dipole on gpu
+        self.px_gpu = []    # value of x permanent dipole on gpu
+        self.py_gpu = []    # value of y permanent dipole on gpu
+        self.pz_gpu = []    # value of z permanent dipole on gpu
         self.Qxx_gpu = []   # value of xx quadrupole on gpu
         self.Qxy_gpu = []   # value of xy quadrupole on gpu
         self.Qxz_gpu = []   # value of xz quadrupole on gpu
@@ -876,8 +876,8 @@ def initializeField(filename, param):
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
-                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker(qfile[i], param.REAL)   # read charges
-#                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
+#                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
                 if qfile[i][-4:]=='.crd':

@@ -232,7 +232,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                                aux += 6*numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E) # OJO x6!!!
 
 #               For CHILD surfaces, q contributes to RHS in 
 #               EXTERIOR equation (hence Precond[1,:] and [3,:])
@@ -288,7 +288,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)
+                                aux += 6*numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)  # OJO x6!!
 
 #               No preconditioner
 #                F[s_start:s_start+s_size] += aux
@@ -451,9 +451,15 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
             if param.args.polarizable:
                 if len(field_array[j].p)>0:  # Update dipole component on GPU (done every self-iteration)
                     p_tot = field_array[j].p + field_array[j].p_pol
-                    field_array[j].px_gpu = gpuarray.to_gpu(p_tot[:,0].astype(REAL))
-                    field_array[j].py_gpu = gpuarray.to_gpu(p_tot[:,1].astype(REAL))
-                    field_array[j].pz_gpu = gpuarray.to_gpu(p_tot[:,2].astype(REAL))
+                    px_tot_gpu = gpuarray.zeros(len(field_array[j].xq), dtype=REAL)
+                    py_tot_gpu = gpuarray.zeros(len(field_array[j].xq), dtype=REAL)
+                    pz_tot_gpu = gpuarray.zeros(len(field_array[j].xq), dtype=REAL)
+                    px_tot_gpu = gpuarray.to_gpu(p_tot[:,0].astype(REAL))
+                    py_tot_gpu = gpuarray.to_gpu(p_tot[:,1].astype(REAL))
+                    pz_tot_gpu = gpuarray.to_gpu(p_tot[:,2].astype(REAL))
+                    field_array[j].px_gpu = gpuarray.to_gpu(field_array[j].p[:,0].astype(REAL))
+                    field_array[j].py_gpu = gpuarray.to_gpu(field_array[j].p[:,1].astype(REAL))
+                    field_array[j].pz_gpu = gpuarray.to_gpu(field_array[j].p[:,2].astype(REAL))
         
 #           First for CHILD surfaces
             for s in field_array[j].child[:]:       # Loop over surfaces
@@ -484,7 +490,7 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
                             F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
                             
                             computeRHS_gpu_dipole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
-                                        field_array[j].px_gpu, field_array[j].py_gpu, field_array[j].pz_gpu,
+                                        px_tot_gpu, py_tot_gpu, pz_tot_gpu,
                                         surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
                                         REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
 
@@ -576,7 +582,7 @@ def generateRHS_gpu(field_array, surf_array, param, kernel, timing, ind0):
                         F_gpu = gpuarray.zeros(Nround, dtype=REAL)     
                         
                         computeRHS_gpu_dipole(F_gpu, field_array[j].xq_gpu, field_array[j].yq_gpu, field_array[j].zq_gpu, 
-                                    field_array[j].px_gpu, field_array[j].py_gpu, field_array[j].pz_gpu,
+                                    px_tot_gpu, py_tot_gpu, pz_tot_gpu,
                                     surf_array[s].xiDev, surf_array[s].yiDev, surf_array[s].ziDev, surf_array[s].sizeTarDev, numpy.int32(Nq), 
                                     REAL(field_array[j].E), numpy.int32(param.NCRIT), numpy.int32(param.BlocksPerTwig), block=(param.BSZ,1,1), grid=(GSZ,1)) 
 
@@ -1045,11 +1051,12 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
 
                 # Computes the coulomb electric field and the induced dipole
                 # (induced by both the coulomb and reaction fields)
-                # See that px_pol, py_pol, and pz_pol are 0 
                 if par_reac.GPU==0:
-                    p_tot = f.p + f.p_pol
+                    px_pol[:] = f.p_pol[:,0]
+                    py_pol[:] = f.p_pol[:,1]
+                    pz_pol[:] = f.p_pol[:,2]
                     compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
-                                           p_tot[:,0], p_tot[:,1], p_tot[:,2],
+                                           f.p[:,0], f.p[:,1], f.p[:,2],
                                            px_pol, py_pol, pz_pol,
                                            f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
                                            f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
@@ -1057,7 +1064,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                            f.alpha[:,0,0], f.alpha[:,0,1], f.alpha[:,0,2],
                                            f.alpha[:,1,0], f.alpha[:,1,1], f.alpha[:,1,2],
                                            f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
-                                           f.thole, f.polar_group, dphix_reac, dphiy_reac, dphiz_reac, f.E)
+                                           f.thole, numpy.int32(f.polar_group), dphix_reac, dphiy_reac, dphiz_reac, f.E)
 
                 elif par_reac.GPU==1:
                     GSZ = int(numpy.ceil(float(len(f.q))/par_reac.BSZ)) # CUDA grid size
@@ -1070,6 +1077,10 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                     px_pol_gpu = gpuarray.zeros(len(f.q), dtype=par_reac.REAL)
                     py_pol_gpu = gpuarray.zeros(len(f.q), dtype=par_reac.REAL)
                     pz_pol_gpu = gpuarray.zeros(len(f.q), dtype=par_reac.REAL)
+
+                    px_pol_gpu = gpuarray.to_gpu(f.p_pol[:,0].astype(par_reac.REAL))
+                    py_pol_gpu = gpuarray.to_gpu(f.p_pol[:,1].astype(par_reac.REAL))
+                    pz_pol_gpu = gpuarray.to_gpu(f.p_pol[:,2].astype(par_reac.REAL))
 
                     compute_induced_dipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu,
                                             f.px_gpu, f.py_gpu, f.pz_gpu, 
@@ -1109,9 +1120,15 @@ def coulombEnergy(f, param, kernel):
 
     else: # contains multipoles
         if param.GPU==0:
+            p_polx = numpy.zeros(len(f.xq))
+            p_poly = numpy.zeros(len(f.xq))
+            p_polz = numpy.zeros(len(f.xq))
+            p_polx[:] = f.p_pol[:,0]
+            p_poly[:] = f.p_pol[:,1]
+            p_polz[:] = f.p_pol[:,2]
             coulomb_energy_multipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
                                      f.p[:,0], f.p[:,1], f.p[:,2],
-                                     f.p_pol[:,0], f.p_pol[:,1], f.p_pol[:,2],
+                                     p_polx, p_poly, p_polz,
                                      f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
                                      f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
                                      f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
@@ -1125,9 +1142,9 @@ def coulombEnergy(f, param, kernel):
             py_pol_gpu = gpuarray.to_gpu(f.p_pol[:,1])
             pz_pol_gpu = gpuarray.to_gpu(f.p_pol[:,2])
 
-            f.px_gpu = gpuarray.to_gpu(f.p_pol[:,0]+f.p[:,0])
-            f.py_gpu = gpuarray.to_gpu(f.p_pol[:,1]+f.p[:,1])
-            f.pz_gpu = gpuarray.to_gpu(f.p_pol[:,2]+f.p[:,2])
+#            f.px_gpu = gpuarray.to_gpu(f.p[:,0])
+#            f.py_gpu = gpuarray.to_gpu(f.p[:,1])
+#            f.pz_gpu = gpuarray.to_gpu(f.p[:,2])
 
             coulomb_energy_multipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu, 
                                          f.px_gpu, f.py_gpu, f.pz_gpu,
@@ -1177,7 +1194,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
     dphiy_reac = numpy.zeros(len(f.xq))
     dphiz_reac = numpy.zeros(len(f.xq))
 
-    while dipole_diff>1e-3:
+    while dipole_diff>1e-2:
         iteration += 1
         
         if param.GPU==0:
