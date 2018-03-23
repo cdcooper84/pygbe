@@ -3222,6 +3222,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             {
                 gamma = min(thole_local, thole[j]);
                 damp = pow(alpha_local*alpha[j],0.16666667);
+                damp += 1e-12;
                 damp = -gamma*(1/(r3*damp*damp*damp));
                 expdamp = exp(damp);
                 scale3 = 1 - expdamp;
@@ -3287,7 +3288,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 
             gamma = min(thole_local, thole[j]);
             damp = pow(alpha_local*alpha[j],0.16666667);
+            damp += 1e-12;
             damp = -gamma*(1/(r3*damp*damp*damp));
+
             expdamp = exp(damp);
             scale3 = 1 - expdamp;
             scale5 = 1 - expdamp*(1-damp);

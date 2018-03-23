@@ -298,6 +298,11 @@ def main(log_output=True):
         computeIndices(par_reac.P, ind_reac)
         precomputeTerms(par_reac.P, ind_reac)
 
+#       use coulomb induced dipole as initial guess of self consistent iteration
+#        for f in field_array:
+#            if f.coulomb == 1:
+#                coulomb_polarizable_dipole(f, param, kernel) 
+
         while dipole_diff>1e-2:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration

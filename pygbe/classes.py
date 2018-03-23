@@ -876,10 +876,13 @@ def initializeField(filename, param):
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
-#                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker(qfile[i], param.REAL)   # read charges
-                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
+                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+#                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
+                polar_group = 0 # dummy
+                thole = 0       # dummy
+                mass = 0        # dummy
                 if qfile[i][-4:]=='.crd':
                     xq,q,Nq = readcrd(qfile[i], param.REAL)             # read charges
                     print '\nReading crd for region %i from '%i+qfile[i]

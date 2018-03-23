@@ -1188,6 +1188,13 @@ def coulomb_polarizable_dipole(f, param, kernel):
         py_pol_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
         pz_pol_gpu = gpuarray.zeros(len(f.q), dtype=param.REAL)
 
+        f.px_gpu = gpuarray.to_gpu(f.p[:,0])
+        f.py_gpu = gpuarray.to_gpu(f.p[:,1])
+        f.pz_gpu = gpuarray.to_gpu(f.p[:,2])
+
+        GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
+        compute_induced_dipole_gpu = kernel.get_function("compute_induced_dipole")
+
     # dummy phi_reac. This is a vacuum calculation
     # then there is no solvent reaction
     dphix_reac = numpy.zeros(len(f.xq))
@@ -1209,16 +1216,10 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                    f.alpha[:,2,0], f.alpha[:,2,1], f.alpha[:,2,2],
                                    f.thole, numpy.int32(f.polar_group), dphix_reac, dphiy_reac, dphiz_reac, f.E)
         elif param.GPU==1:
-            GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
-            compute_induced_dipole_gpu = kernel.get_function("compute_induced_dipole")
 
             dphix_reac_gpu = gpuarray.to_gpu(dphix_reac.astype(param.REAL))
             dphiy_reac_gpu = gpuarray.to_gpu(dphiy_reac.astype(param.REAL))
             dphiz_reac_gpu = gpuarray.to_gpu(dphiz_reac.astype(param.REAL))
-
-            f.px_gpu = gpuarray.to_gpu(f.p[:,0])
-            f.py_gpu = gpuarray.to_gpu(f.p[:,1])
-            f.pz_gpu = gpuarray.to_gpu(f.p[:,2])
 
             compute_induced_dipole_gpu(f.xq_gpu, f.yq_gpu, f.zq_gpu, f.q_gpu,
                                     f.px_gpu, f.py_gpu, f.pz_gpu, 

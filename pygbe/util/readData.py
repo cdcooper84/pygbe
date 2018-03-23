@@ -436,6 +436,7 @@ def read_tinker_pqr(filename, REAL):
     alpha = numpy.zeros((N,3,3))
     thole = numpy.zeros(N)
     mass  = numpy.zeros(N)
+    radii = numpy.zeros(N)
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
     polar_group = -numpy.ones(N, dtype=int)
@@ -461,6 +462,7 @@ def read_tinker_pqr(filename, REAL):
     thole_factor = {}
     polar_group_list = {}
     multipole_list = []
+    vdw_radii = {}
     multipole_flag = 0
 
     with open(file_key, 'r') as f:
@@ -482,6 +484,9 @@ def read_tinker_pqr(filename, REAL):
                 thole_factor[line[1]] = REAL(line[3])
                 polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
                 polar_group_list[line[1]][:] = line[4:]
+                
+            if line[0].lower()=='vdw':
+                vdw_radii[line[1]] = numpy.float64(line[2])
 
     for line_full in file(file_pqr):
         line_aux = line_full.split()
@@ -527,6 +532,9 @@ def read_tinker_pqr(filename, REAL):
 #       Get mass
         mass[i] = atom_mass[atom_type[i]]
 
+#       Get VdW radii
+        radii[i] = vdw_radii[atom_class[atom_type[i]]]
+
 #       Find atom polarization group
         if polar_group[i]==-1:
 #           Check with connections if there is a group member already assigned
@@ -548,6 +556,14 @@ def read_tinker_pqr(filename, REAL):
                         polar_group[j] = polar_group[i]
                     elif polar_group[j]!=polar_group[i]: 
                         print 'double polarization group assigment here too!'
+
+#   Generate pqr file (debugging)
+#    f = open(filename+"_test.pqr","w")
+#    for i in range(N):
+#        f.write('ATOM\t%i\tAAA\tAAA\t1\t%1.5f\t%1.5f\t%1.5f\t%1.5f\t%1.5f\n'%(i+1,pos[i,0],pos[i,1],pos[i,2],q[i],radii[i]))
+#    f.close()
+#    quit()
+
 
 
     return pos, q, p, Q, alpha, mass, polar_group, thole, N
