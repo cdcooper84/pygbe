@@ -1201,7 +1201,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
     dphiy_reac = numpy.zeros(len(f.xq))
     dphiz_reac = numpy.zeros(len(f.xq))
 
-    while dipole_diff>1e-2:
+    while dipole_diff>1e-3:
         iteration += 1
         
         if param.GPU==0:

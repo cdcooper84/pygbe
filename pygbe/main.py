@@ -303,7 +303,7 @@ def main(log_output=True):
 #            if f.coulomb == 1:
 #                coulomb_polarizable_dipole(f, param, kernel) 
 
-        while dipole_diff>1e-2:
+        while dipole_diff>1e-3:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration
             print 'Generate RHS'
@@ -426,22 +426,18 @@ def main(log_output=True):
                 print 'Calculate total dipole in dissolved state'
                 ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.mass), axis=1)/numpy.sum(numpy.abs(f.mass))
                 
-
                 r = f.xq - ctr
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)
                 d_dipole = numpy.sum(f.p_pol+f.p, axis=0)
                 d_total = d_dipole+d_charge
                 print 'Total dipole in dissolved state: %1.5f, %1.5f, %1.5f. Magnitude: %1.5f'%(d_total[0]*to_debye, d_total[1]*to_debye, d_total[2]*to_debye, numpy.sqrt(numpy.sum(d_total**2))*to_debye)
    
-
                 print 'Calculate vacuum induced dipole for region %i'%i
                 f.p_pol[:,:] = 0.0 # Reuse p_pol for vacuum induced dipole
                 coulomb_polarizable_dipole(f, param, kernel) 
-                
     
                 print 'Calculate total dipole in vacuum state'
                 ctr = numpy.sum(numpy.transpose(f.xq)*numpy.abs(f.mass), axis=1)/numpy.sum(numpy.abs(f.mass))
-                
 
                 r = f.xq - ctr
                 d_charge = numpy.sum(numpy.transpose(r)*f.q, axis=1)

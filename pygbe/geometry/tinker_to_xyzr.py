@@ -75,7 +75,7 @@ for line in file(file_key):
             atom_class[line[1]] = line[2]
 
         if line[0].lower()=='vdw':
-            vdw_radii[line[1]] = numpy.float64(line[2])
+            vdw_radii[line[1]] = numpy.float64(line[2])/2.
                 
 for i in range(N):
     r[i] = vdw_radii[atom_class[atom_type[i]]] 
