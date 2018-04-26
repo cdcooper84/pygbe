@@ -1148,58 +1148,6 @@ void coulomb_phi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL
     }
 }
 
-void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
-                                  REAL *alpha, REAL *thole, REAL dphi[][3], int N)
-{
-	REAL r, r3, r5;
-	REAL eps = 1e-15;
-	REAL T1[3], Ri[3], sum[3];
-	REAL dkl, dkm;
-    REAL scale3 = 1.0;
-    REAL scale5 = 1.0;
-    REAL damp, gamma, expdamp;
-
-    for (int i=0; i<N; i++)
-    {
-        sum[0] = 0;
-        sum[1] = 0;
-        sum[2] = 0;
-        for (int j=0; j<N; j++)
-        {
-            Ri[0] = xt[i] - xt[j];
-            Ri[1] = yt[i] - yt[j];
-            Ri[2] = zt[i] - zt[j];
-
-            r  = 1./sqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
-            r3 = r*r*r;
-            r5 = r3*r*r;
-
-            gamma = std::min(thole[i], thole[j]);
-            damp = pow(alpha[i]*alpha[j],0.16666667);
-            damp = -gamma*(1/(r3*damp*damp*damp));
-            expdamp = exp(damp);
-            scale3 = 1 - expdamp;
-            scale5 = 1 - expdamp*(1-damp);
-
-            if (r<1e12)
-            {
-                for (int k=0; k<3; k++)
-                {
-                    for (int l=0; l<3; l++)
-                    {
-                        dkl = (REAL)(k==l);
-                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
-                    }
-
-                    sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
-                }
-            }
-        }
-        dphi[i][0] += sum[0];
-        dphi[i][1] += sum[1];
-        dphi[i][2] += sum[2];
-    }
-}
 
 void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL *py, REAL *pz,
                         REAL *Qxx, REAL *Qxy, REAL *Qxz, REAL *Qyx, REAL *Qyy, REAL *Qyz,
@@ -1338,7 +1286,8 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
                                 T2[m][n] = 35*Ri[k]*Ri[l]*Ri[m]*Ri[n]/R9
                                         - 5*(Ri[m]*Ri[n]*dkl + Ri[l]*Ri[n]*dkm
                                            + Ri[m]*Ri[l]*dkn + Ri[k]*Ri[n]*dlm
-                                           + Ri[m]*Ri[k]*dln)/R7;
+                                           + Ri[m]*Ri[k]*dln)/R7
+                                        + (dkm*dln + dlm*dkn)/R5;
  
                             }
                         }
@@ -1359,13 +1308,183 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
         }
     }
 }
+
+void coulomb_phi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
+                                  REAL *alpha, REAL *thole, REAL *phi, int N)
+{
+	REAL r, r3, r5;
+	REAL eps = 1e-15;
+	REAL T1[3], Ri[3], sum;
+	REAL dkl, dkm;
+    REAL scale3 = 1.0;
+    REAL damp, gamma, expdamp;
+
+
+    for (int i=0; i<N; i++)
+    {
+        sum = 0.0;
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j]; 
+            Ri[1] = yt[i] - yt[j]; 
+            Ri[2] = zt[i] - zt[j]; 
+
+            r  = 1./sqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+            r3 = r*r*r;
+            
+            gamma = std::min(thole[i], thole[j]);
+            damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp = -gamma*(1/(r3*damp*damp*damp));
+            expdamp = exp(damp);
+            scale3 = 1 - expdamp;
+
+            if (r<1e12) //remove singularity
+            {
+                for (int k=0; k<3; k++)
+                {
+                    T1[k] = Ri[k]*r3*scale3;
+                }                          
+                sum += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+            }
+        }
+        phi[i] += sum;
+    }
+
+}
+
+void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
+                                  REAL *alpha, REAL *thole, REAL dphi[][3], int N)
+{
+	REAL r, r3, r5;
+	REAL eps = 1e-15;
+	REAL T1[3], Ri[3], sum[3];
+	REAL dkl, dkm;
+    REAL scale3 = 1.0;
+    REAL scale5 = 1.0;
+    REAL damp, gamma, expdamp;
+
+    for (int i=0; i<N; i++)
+    {
+        sum[0] = 0;
+        sum[1] = 0;
+        sum[2] = 0;
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j];
+            Ri[1] = yt[i] - yt[j];
+            Ri[2] = zt[i] - zt[j];
+
+            r  = 1./sqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+            r3 = r*r*r;
+            r5 = r3*r*r;
+
+            gamma = std::min(thole[i], thole[j]);
+            damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp = -gamma*(1/(r3*damp*damp*damp));
+            expdamp = exp(damp);
+            scale3 = 1 - expdamp;
+            scale5 = 1 - expdamp*(1-damp);
+
+            if (r<1e12) // Remove singularity
+            {
+                for (int k=0; k<3; k++)
+                {
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
+                    }
+
+                    sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+                }
+            }
+        }
+        dphi[i][0] += sum[0];
+        dphi[i][1] += sum[1];
+        dphi[i][2] += sum[2];
+    }
+}
+
+void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
+                                  REAL *alpha, REAL *thole, REAL ddphi[][3][3], int N)
+{
+	REAL r, r3, r5, r7;
+	REAL eps = 1e-15;
+	REAL T1[3], Ri[3], sum[3][3];
+	REAL dkl, dkm, dlm;
+    REAL scale3 = 1.0;
+    REAL scale5 = 1.0;
+    REAL scale7 = 1.0;
+    REAL damp, gamma, expdamp;
+
+    for (int i=0; i<N; i++)
+    {
+        sum[0][0] = 0.0;
+        sum[0][1] = 0.0;
+        sum[0][2] = 0.0;
+        sum[1][0] = 0.0;
+        sum[1][1] = 0.0;
+        sum[1][2] = 0.0;
+        sum[2][0] = 0.0;
+        sum[2][1] = 0.0;
+        sum[2][2] = 0.0;
+        for (int j=0; j<N; j++)
+        {
+            Ri[0] = xt[i] - xt[j]; 
+            Ri[1] = yt[i] - yt[j]; 
+            Ri[2] = zt[i] - zt[j]; 
+
+            r  = 1./sqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+            r3 = r*r*r;
+            r5 = r3*r*r;
+            r7 = r5*r*r;
+
+            gamma = std::min(thole[i], thole[j]);
+            damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp = -gamma*(1/(r3*damp*damp*damp));
+            expdamp = exp(damp);
+            scale5 = 1 - expdamp*(1-damp);
+            scale7 = 1 - expdamp*(1-damp+0.6*damp*damp);
+            
+            if (r<1e12) //remove singularity
+            {
+                for (int k=0; k<3; k++)
+                {
+                    for (int l=0; l<3; l++)
+                    {
+                        dkl = (REAL)(k==l);
+
+                        for (int m=0; m<3; m++)
+                        {
+                            dkm = (REAL)(k==m);
+                            dlm = (REAL)(l==m);
+                            T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5 + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7;
+                                                    
+                        }
+                        sum[k][l] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+                    }
+                }                          
+            }
+        }
+
+        for (int k=0; k<3; k++)
+        {
+            for (int l=0; l<3; l++)
+            {
+                ddphi[i][k][l] += sum[k][l];
+            }
+        }
+    }
+}
+
+
 void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt, int ztSize, 
                         REAL *q, int qSize, REAL *px, int pxSize, REAL *py, int pySize, REAL *pz, int pzSize, 
                         REAL *px_pol, int px_polSize, REAL *py_pol, int py_polSize, REAL *pz_pol, int pz_polSize, 
                         REAL *Qxx, int QxxSize, REAL *Qxy, int QxySize, REAL *Qxz, int QxzSize, 
                         REAL *Qyx, int QyxSize, REAL *Qyy, int QyySize, REAL *Qyz, int QyzSize, 
                         REAL *Qzx, int QzxSize, REAL *Qzy, int QzySize, REAL *Qzz, int QzzSize, 
-                        REAL *K_aux, int K_auxSize)
+                        REAL *alphaxx, int alphaxxSize, REAL *thole, int tholeSize, REAL *K_aux, int K_auxSize)
 {
     double phi  [xtSize];
     double dphi [xtSize][3];
@@ -1396,15 +1515,27 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
     int *dummy;
     double *dummy2;
 
-    coulomb_phi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
+    // phi, dphi and ddphi from permanent multipoles
+    coulomb_phi_multipole(xt, yt, zt, q, px, py, pz,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, phi, xtSize);
-    coulomb_dphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
+
+    coulomb_dphi_multipole(xt, yt, zt, q, px, py, pz,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, dummy2, dummy2, dummy, flag_polar_group, dphi, xtSize);
-    coulomb_ddphi_multipole(xt, yt, zt, q, px_tot, py_tot, pz_tot,
+
+    coulomb_ddphi_multipole(xt, yt, zt, q, px, py, pz,
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz,
                            Qzx, Qzy, Qzz, ddphi, xtSize);
+
+
+    // phi, dphi and ddphi from induced dipoles
+
+    coulomb_phi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, phi, xtSize);
+    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, dphi, xtSize);
+    coulomb_ddphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, ddphi, xtSize);
+
+
 
     for (int i=0; i<xtSize; i++)
     {
@@ -1412,7 +1543,7 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
                   + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2]
                   +(Qxx[i]*ddphi[i][0][0] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
                   + Qxy[i]*ddphi[i][1][0] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
-                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.);
+                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/1.);
                     // Energy calculated with p (rather than p_tot) to account for polarization energy
     }
     

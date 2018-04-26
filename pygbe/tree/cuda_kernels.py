@@ -3369,7 +3369,8 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                 T2[m][n] = 35*Ri[k]*Ri[l]*Ri[m]*Ri[n]*r9
                                         - 5*(Ri[m]*Ri[n]*dkl + Ri[l]*Ri[n]*dkm
                                            + Ri[m]*Ri[l]*dkn + Ri[k]*Ri[n]*dlm
-                                           + Ri[m]*Ri[k]*dln)*r7;
+                                           + Ri[m]*Ri[k]*dln)*r7
+                                           + (dkm*dln + dlm*dkn)*r5; 
                             }
                         }
 
@@ -3648,7 +3649,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                       + px[I]*dphix_coul + py[I]*dphiy_coul + pz[I]*dphiz_coul
                       +(Qxx[I]*ddphixx_coul + Qxy[I]*ddphixy_coul + Qxz[I]*ddphixz_coul
                       + Qxy[I]*ddphiyx_coul + Qyy[I]*ddphiyy_coul + Qyz[I]*ddphiyz_coul
-                      + Qxz[I]*ddphizx_coul + Qzy[I]*ddphizy_coul + Qzz[I]*ddphizz_coul)/6.);
+                      + Qxz[I]*ddphizx_coul + Qzy[I]*ddphizy_coul + Qzz[I]*ddphizz_coul)/1.);
                         // Energy calculated with p_tot-p_pol (rather than p_tot) to account for polarization energy
         }
 

@@ -303,7 +303,7 @@ def main(log_output=True):
 #            if f.coulomb == 1:
 #                coulomb_polarizable_dipole(f, param, kernel) 
 
-        while dipole_diff>1e-3:
+        while dipole_diff>1e-2:
             iteration += 1
             print '\nSelf-consistent iteration %i'%iteration
             print 'Generate RHS'

@@ -1131,7 +1131,8 @@ def coulombEnergy(f, param, kernel):
                                      p_polx, p_poly, p_polz,
                                      f.Q[:,0,0], f.Q[:,0,1], f.Q[:,0,2],
                                      f.Q[:,1,0], f.Q[:,1,1], f.Q[:,1,2],
-                                     f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], point_energy)
+                                     f.Q[:,2,0], f.Q[:,2,1], f.Q[:,2,2], 
+                                     f.alpha[:,0,0], f.thole, point_energy)
         elif param.GPU==1:
 
             GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
@@ -1201,7 +1202,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
     dphiy_reac = numpy.zeros(len(f.xq))
     dphiz_reac = numpy.zeros(len(f.xq))
 
-    while dipole_diff>1e-3:
+    while dipole_diff>1e-2:
         iteration += 1
         
         if param.GPU==0:

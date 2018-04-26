@@ -68,7 +68,7 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
-                        double *K_aux, int K_auxSize);
+                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, double *K_aux, int K_auxSize);
 
 extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
@@ -250,7 +250,7 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
-                        double *K_aux, int K_auxSize);
+                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, double *K_aux, int K_auxSize);
 
 extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
