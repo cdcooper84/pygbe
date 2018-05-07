@@ -945,7 +945,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                                                    field_array[f].p[:,2]*dphiz_reac)
 
                 if len(field_array[f].Q)>0:
-                    E_solv_aux += 0.5*C0*(1/6.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
+                    E_solv_aux += 0.5*C0*(1/1.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
                                                            field_array[f].Q[:,0,1]*dphixy_reac +\
                                                            field_array[f].Q[:,0,2]*dphixz_reac +\
                                                            field_array[f].Q[:,1,0]*dphiyx_reac +\
@@ -953,7 +953,8 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                                                            field_array[f].Q[:,1,2]*dphiyz_reac +\
                                                            field_array[f].Q[:,2,0]*dphizx_reac +\
                                                            field_array[f].Q[:,2,1]*dphizy_reac +\
-                                                           field_array[f].Q[:,2,2]*dphizz_reac )
+                                                           field_array[f].Q[:,2,2]*dphizz_reac ) 
+                                                           # OJO: not 1/6
 
             E_solv.append(E_solv_aux)
 
@@ -1153,6 +1154,7 @@ def coulombEnergy(f, param, kernel):
                                          f.Qxx_gpu, f.Qxy_gpu, f.Qxz_gpu,
                                          f.Qyx_gpu, f.Qyy_gpu, f.Qyz_gpu,
                                          f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
+                                         f.alphaxx_gpu, f.thole_gpu,
                                          point_energy_gpu, numpy.int32(len(f.q)), 
                                          block=(param.BSZ,1,1), grid=(GSZ,1))
 

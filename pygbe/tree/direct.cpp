@@ -1543,7 +1543,7 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
                   + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2]
                   +(Qxx[i]*ddphi[i][0][0] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
                   + Qxy[i]*ddphi[i][1][0] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
-                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/1.);
+                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/1.); // OJO: not 1/6
                     // Energy calculated with p (rather than p_tot) to account for polarization energy
     }
     

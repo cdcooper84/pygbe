@@ -3261,7 +3261,48 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         dphiz_coul += sum[2];
     }    
 
-    __device__ void coulomb_dphi_dipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
+    __device__ void coulomb_phi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
+												REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local, 
+												REAL *thole, REAL thole_local, REAL &phi, int size)
+	{
+		REAL r, r3;
+		REAL eps = 1e-15;
+		REAL T1[3], Ri[3], sum; 
+		REAL scale3 = 1.0; 
+		REAL damp, gamma, expdamp;
+
+
+		sum = 0.0; 
+		for (int j=0; j<size; j++) 
+		{
+			Ri[0] = x - xq[j]; 
+			Ri[1] = y - yq[j]; 
+			Ri[2] = z - zq[j]; 
+
+			r  = rsqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+			r3 = r*r*r;
+	 
+			gamma = min(thole_local, thole[j]);
+			damp = pow(alpha_local*alpha[j],0.16666667);
+            damp += 1e-12;
+			damp = -gamma*(1/(r3*damp*damp*damp));
+			expdamp = exp(damp);
+			scale3 = 1 - expdamp;
+
+			if (r<1e12) //remove singularity
+			{
+				for (int k=0; k<3; k++) 
+				{
+					T1[k] = Ri[k]*r3*scale3;
+				}                               
+				sum += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+			}    
+		}    
+		phi += sum; 
+
+	} 
+
+    __device__ void coulomb_dphi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
                                                     REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local,
 													REAL *thole, REAL thole_local,
                                                     REAL &dphix_coul, REAL &dphiy_coul, REAL &dphiz_coul, int size)
@@ -3313,6 +3354,83 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         dphiy_coul += sum[1];
         dphiz_coul += sum[2];
     }
+
+    __device__ void coulomb_ddphi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
+                                                    REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local,
+													REAL *thole, REAL thole_local,
+												    REAL &ddphixx_coul, REAL &ddphixy_coul, REAL &ddphixz_coul,
+												    REAL &ddphiyx_coul, REAL &ddphiyy_coul, REAL &ddphiyz_coul,
+												    REAL &ddphizx_coul, REAL &ddphizy_coul, REAL &ddphizz_coul, int size)
+	{
+		REAL r, r3, r5, r7;
+		REAL eps = 1e-15;
+		REAL T1[3], Ri[3], sum[3][3];
+		REAL dkl, dkm, dlm;
+		REAL scale5 = 1.0;
+		REAL scale7 = 1.0;
+		REAL damp, gamma, expdamp;
+
+		sum[0][0] = 0.0;
+		sum[0][1] = 0.0;
+		sum[0][2] = 0.0;
+		sum[1][0] = 0.0;
+		sum[1][1] = 0.0;
+		sum[1][2] = 0.0;
+		sum[2][0] = 0.0;
+		sum[2][1] = 0.0;
+		sum[2][2] = 0.0;
+
+		for (int j=0; j<size; j++)
+		{
+			Ri[0] = x - xq[j];
+			Ri[1] = y - yq[j];
+			Ri[2] = z - zq[j];
+
+			r  = rsqrt(Ri[0]*Ri[0] + Ri[1]*Ri[1] + Ri[2]*Ri[2] + eps*eps);
+			r3 = r*r*r;
+			r5 = r3*r*r;
+			r7 = r5*r*r;
+
+			gamma = min(thole_local, thole[j]);
+			damp = pow(alpha_local*alpha[j],0.16666667);
+            damp += 1e-12;
+			damp = -gamma*(1/(r3*damp*damp*damp));
+			expdamp = exp(damp);
+			scale5 = 1 - expdamp*(1-damp);
+			scale7 = 1 - expdamp*(1-damp+0.6*damp*damp);
+
+			if (r<1e12) //remove singularity
+			{
+				for (int k=0; k<3; k++)
+				{
+					for (int l=0; l<3; l++)
+					{
+						dkl = (REAL)(k==l);
+
+						for (int m=0; m<3; m++)
+						{
+							dkm = (REAL)(k==m);
+							dlm = (REAL)(l==m);
+							T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5 + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7;
+
+						}
+						sum[k][l] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
+					}
+				}
+			}
+		}
+
+
+        ddphixx_coul += sum[0][0];
+        ddphixy_coul += sum[0][1];
+        ddphixz_coul += sum[0][2];
+        ddphiyx_coul += sum[1][0];
+        ddphiyy_coul += sum[1][1];
+        ddphiyz_coul += sum[1][2];
+        ddphizx_coul += sum[2][0];
+        ddphizy_coul += sum[2][1];
+        ddphizz_coul += sum[2][2];
+	}
 
     __device__ void coulomb_ddphi_multipole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, REAL *q,
                                       REAL *px, REAL *py, REAL *pz, REAL *Qxx, REAL *Qxy, REAL *Qxz,
@@ -3464,7 +3582,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                         dphiz_coul, BSZ);
 
                 // Polarization due to induced dipoles only
-                coulomb_dphi_dipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
+                coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                                 px_pol_sh, py_pol_sh, pz_pol_sh, 
                                                 alpha_sh, alpha_local, thole_sh, thole_local,
                                                 dphix_coul, dphiy_coul, dphiz_coul, BSZ);
@@ -3506,7 +3624,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                     dphiz_coul, (Nq-block*BSZ));
 
             // Polarization due to induced dipoles only
-            coulomb_dphi_dipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
+            coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                             px_pol_sh, py_pol_sh, pz_pol_sh, 
                                             alpha_sh, alpha_local, thole_sh, thole_local,
                                             dphix_coul, dphiy_coul, dphiz_coul, (Nq-block*BSZ));
@@ -3538,7 +3656,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                              REAL *Qxx, REAL *Qxy, REAL *Qxz, 
                                              REAL *Qyx, REAL *Qyy, REAL *Qyz, 
                                              REAL *Qzx, REAL *Qzy, REAL *Qzz, 
-                                             REAL *point_energy, int Nq)
+                                             REAL *alphaxx, REAL *thole, REAL *point_energy, int Nq)
     {
         int I = threadIdx.x + blockIdx.x*blockDim.x;
         REAL x, y, z, phi_coul = 0;
@@ -3546,18 +3664,23 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         REAL ddphixx_coul = 0, ddphixy_coul = 0, ddphixz_coul = 0;
         REAL ddphiyx_coul = 0, ddphiyy_coul = 0, ddphiyz_coul = 0;
         REAL ddphizx_coul = 0, ddphizy_coul = 0, ddphizz_coul = 0;
-        REAL dx, dy, dz, r, eps = 1e-16;
+        REAL dx, dy, dz, r, eps = 1e-16, alpha_local, thole_local;
         __shared__ REAL xq_sh[BSZ], yq_sh[BSZ], zq_sh[BSZ], q_sh[BSZ];
-        __shared__ REAL pxt_sh[BSZ], pyt_sh[BSZ], pzt_sh[BSZ];
+        __shared__ REAL px_sh[BSZ], py_sh[BSZ], pz_sh[BSZ];
+        __shared__ REAL px_pol_sh[BSZ], py_pol_sh[BSZ], pz_pol_sh[BSZ];
         __shared__ REAL Qxx_sh[BSZ], Qxy_sh[BSZ], Qxz_sh[BSZ];
         __shared__ REAL Qyx_sh[BSZ], Qyy_sh[BSZ], Qyz_sh[BSZ];
         __shared__ REAL Qzx_sh[BSZ], Qzy_sh[BSZ], Qzz_sh[BSZ];
+        __shared__ REAL alpha_sh[BSZ], thole_sh[BSZ];
         __shared__ int dummy[BSZ];
 		REAL *dummy2;
 
         x = xq[I];
         y = yq[I];
         z = zq[I];
+
+        alpha_local = alphaxx[I]; // Using alphaxx because it is usually a scalar (not tensor)
+		thole_local = thole[I];
 
         for (int block=0; block<(Nq-1)/BSZ; block++)
         {
@@ -3566,9 +3689,12 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
             zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
             q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
-            pxt_sh[threadIdx.x] = px[block*BSZ+threadIdx.x] + px_pol[block*BSZ+threadIdx.x];
-            pyt_sh[threadIdx.x] = py[block*BSZ+threadIdx.x] + py_pol[block*BSZ+threadIdx.x];
-            pzt_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x] + pz_pol[block*BSZ+threadIdx.x];
+            px_sh[threadIdx.x] = px[block*BSZ+threadIdx.x];
+            py_sh[threadIdx.x] = py[block*BSZ+threadIdx.x];
+            pz_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x];
+            px_pol_sh[threadIdx.x] = px_pol[block*BSZ+threadIdx.x];
+            py_pol_sh[threadIdx.x] = py_pol[block*BSZ+threadIdx.x];
+            pz_pol_sh[threadIdx.x] = pz_pol[block*BSZ+threadIdx.x];
             Qxx_sh[threadIdx.x] = Qxx[block*BSZ+threadIdx.x];
             Qxy_sh[threadIdx.x] = Qxy[block*BSZ+threadIdx.x];
             Qxz_sh[threadIdx.x] = Qxz[block*BSZ+threadIdx.x];
@@ -3578,27 +3704,44 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             Qzx_sh[threadIdx.x] = Qzx[block*BSZ+threadIdx.x];
             Qzy_sh[threadIdx.x] = Qzy[block*BSZ+threadIdx.x];
             Qzz_sh[threadIdx.x] = Qzz[block*BSZ+threadIdx.x];
+            alpha_sh[threadIdx.x] = alphaxx[block*BSZ+threadIdx.x]; // using alphaxx as it usually is a scalar
+            thole_sh[threadIdx.x] = thole[block*BSZ+threadIdx.x];
             __syncthreads();
 
             if (I<Nq)
             {
+                // Permanent multipoles
                 coulomb_phi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                         phi_coul, BSZ);
 
                 coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, 
 										dummy2, 1.0, dummy2, 1.0, dummy, -1,
                                         dphix_coul, dphiy_coul, dphiz_coul, BSZ);
 
                 coulomb_ddphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                        pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                        px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                         Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                         ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                         ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
                                         ddphizx_coul, ddphizy_coul, ddphizz_coul, BSZ);
+
+                // Induced dipoles
+                coulomb_phi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                                  alpha_sh, alpha_local, thole_sh, thole_local, phi_coul, BSZ);  
+
+                coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                                  alpha_sh, alpha_local, thole_sh, thole_local, 
+                                                  dphix_coul, dphiy_coul, dphiz_coul, BSZ);  
+
+                coulomb_ddphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                                  alpha_sh, alpha_local, thole_sh, thole_local, 
+                                                  ddphixx_coul, ddphixy_coul, ddphixz_coul, 
+                                                  ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
+                                                  ddphizx_coul, ddphizy_coul, ddphizz_coul, BSZ);  
             }
         }
 
@@ -3608,9 +3751,12 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         yq_sh[threadIdx.x] = yq[block*BSZ+threadIdx.x];
         zq_sh[threadIdx.x] = zq[block*BSZ+threadIdx.x];
         q_sh[threadIdx.x]  = q[block*BSZ+threadIdx.x];
-        pxt_sh[threadIdx.x] = px[block*BSZ+threadIdx.x] + px_pol[block*BSZ+threadIdx.x];
-        pyt_sh[threadIdx.x] = py[block*BSZ+threadIdx.x] + py_pol[block*BSZ+threadIdx.x];
-        pzt_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x] + pz_pol[block*BSZ+threadIdx.x];
+        px_sh[threadIdx.x] = px[block*BSZ+threadIdx.x];
+        py_sh[threadIdx.x] = py[block*BSZ+threadIdx.x];
+        pz_sh[threadIdx.x] = pz[block*BSZ+threadIdx.x];
+        px_pol_sh[threadIdx.x] = px_pol[block*BSZ+threadIdx.x];
+        py_pol_sh[threadIdx.x] = py_pol[block*BSZ+threadIdx.x];
+        pz_pol_sh[threadIdx.x] = pz_pol[block*BSZ+threadIdx.x];
         Qxx_sh[threadIdx.x] = Qxx[block*BSZ+threadIdx.x];
         Qxy_sh[threadIdx.x] = Qxy[block*BSZ+threadIdx.x];
         Qxz_sh[threadIdx.x] = Qxz[block*BSZ+threadIdx.x];
@@ -3620,27 +3766,44 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         Qzx_sh[threadIdx.x] = Qzx[block*BSZ+threadIdx.x];
         Qzy_sh[threadIdx.x] = Qzy[block*BSZ+threadIdx.x];
         Qzz_sh[threadIdx.x] = Qzz[block*BSZ+threadIdx.x];
+        alpha_sh[threadIdx.x] = alphaxx[block*BSZ+threadIdx.x]; // using alphaxx as it usually is a scalar
+        thole_sh[threadIdx.x] = thole[block*BSZ+threadIdx.x];
         __syncthreads();
 
         if (I<Nq)
         {
             coulomb_phi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                     phi_coul, (Nq-block*BSZ));
 
             coulomb_dphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh, 
 									dummy2, 1.0, dummy2, 1.0, dummy, -1,
                                     dphix_coul, dphiy_coul, dphiz_coul, (Nq-block*BSZ));
 
             coulomb_ddphi_multipole_block(x, y, z, xq_sh, yq_sh, zq_sh, q_sh,
-                                    pxt_sh, pyt_sh, pzt_sh, Qxx_sh, Qxy_sh, Qxz_sh,
+                                    px_sh, py_sh, pz_sh, Qxx_sh, Qxy_sh, Qxz_sh,
                                     Qyx_sh, Qyy_sh, Qyz_sh, Qzx_sh, Qzy_sh, Qzz_sh,
                                     ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                     ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
                                     ddphizx_coul, ddphizy_coul, ddphizz_coul, (Nq-block*BSZ));
+
+            // Induced dipoles
+            coulomb_phi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                              alpha_sh, alpha_local, thole_sh, thole_local, phi_coul, BSZ);  
+
+            coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                              alpha_sh, alpha_local, thole_sh, thole_local, 
+                                              dphix_coul, dphiy_coul, dphiz_coul, BSZ);  
+
+            coulomb_ddphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
+                                              alpha_sh, alpha_local, thole_sh, thole_local, 
+                                              ddphixx_coul, ddphixy_coul, ddphixz_coul, 
+                                              ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
+                                              ddphizx_coul, ddphizy_coul, ddphizz_coul, BSZ);  
+
         }
 
         if (I<Nq)
