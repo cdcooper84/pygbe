@@ -100,6 +100,72 @@ def readCheck(aux, REAL):
 
     return X
 
+def find_multipole(multipole_list, connections, atom_type, pos, i, N):
+
+
+#   filter possible multipoles by atom type
+    atom_possible = []
+    for j in range(len(multipole_list)):
+        if atom_type[i] == multipole_list[j][0]:
+            atom_possible.append(multipole_list[j])
+
+#   filter possible multipoles by z axis defining atom (needs to be bonded)
+#   only is atom_possible has more than 1 alternative
+    if len(atom_possible)>1:
+        zaxis_possible = []
+        for j in range(len(atom_possible)):
+            for k in connections[i]:
+                neigh_type = atom_type[k]
+                if neigh_type == atom_possible[j][1]:
+                    zaxis_possible.append(atom_possible[j])
+
+#       filter possible multipoles by x axis defining atom (no need to be bonded)
+#       only if zaxis_possible has more than 1 alternative
+        if len(zaxis_possible)>1:
+            neigh_type = []
+            for j in range(len(zaxis_possible)):
+                neigh_type.append(zaxis_possible[j][2])
+
+            xaxis_possible_atom = []
+            for j in range(N):
+                if atom_type[j] in neigh_type and i!=j:
+                    xaxis_possible_atom.append(j)
+
+            dist = numpy.linalg.norm(pos[i,:] - pos[xaxis_possible_atom,:], axis=1)
+
+
+            xaxis_at_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
+            xaxis_at = xaxis_possible_atom[xaxis_at_index]
+
+#           just check if it's not a connection
+            if xaxis_at not in connections[i]:
+#                print 'For atom %i+1, x axis define atom is %i+1, which is not bonded'%(i,xaxis_at)
+                for jj in connections[i]:
+                    if jj in xaxis_possible_atom:
+                        print 'For atom %i+1, there was a bonded connnection available for x axis, but was not used'%(i)
+
+            xaxis_type = atom_type[xaxis_at]
+
+            xaxis_possible = []
+            for j in range(len(zaxis_possible)):
+                if xaxis_type == zaxis_possible[j][2]:
+                    xaxis_possible.append(zaxis_possible[j])
+
+            if len(xaxis_possible)==0:
+                print 'For atom %i+1 there is no possible multipole'%i
+            if len(xaxis_possible)>1:
+                print 'For atom %i+1 there is more than 1 possible multipole, use last one'%i
+
+        else:
+            xaxis_possible = zaxis_possible
+
+    else:
+        xaxis_possible = atom_possible
+    
+    multipole = xaxis_possible[-1]
+
+    return multipole
+
 def read_tinker(filename, REAL):
     """
     Reads input file from tinker
@@ -129,6 +195,7 @@ def read_tinker(filename, REAL):
     q     = numpy.zeros(N)
     p     = numpy.zeros((N,3))
     Q     = numpy.zeros((N,3,3))
+    test  = numpy.zeros((N,2))
     alpha = numpy.zeros((N,3,3))
     thole = numpy.zeros(N)
     mass  = numpy.zeros(N)
@@ -269,67 +336,8 @@ def read_tinker(filename, REAL):
                     elif polar_group[j]!=polar_group[i]: 
                         print 'double polarization group assigment here too!'
 
+        multipole = find_multipole(multipole_list, connections, atom_type, pos, i, N)
 
-#       filter possible multipoles by atom type
-        atom_possible = []
-        for j in range(len(multipole_list)):
-            if atom_type[i] == multipole_list[j][0]:
-                atom_possible.append(multipole_list[j])
-
-#       filter possible multipoles by z axis defining atom (needs to be bonded)
-#       only is atom_possible has more than 1 alternative
-        if len(atom_possible)>1:
-            zaxis_possible = []
-            for j in range(len(atom_possible)):
-                for k in connections[i]:
-                    neigh_type = atom_type[k]
-                    if neigh_type == atom_possible[j][1]:
-                        zaxis_possible.append(atom_possible[j])
-
-#           filter possible multipoles by x axis defining atom (no need to be bonded)
-#           only if zaxis_possible has more than 1 alternative
-            if len(zaxis_possible)>1:
-                neigh_type = []
-                for j in range(len(zaxis_possible)):
-                    neigh_type.append(zaxis_possible[j][2])
-
-                xaxis_possible_atom = []
-                for j in range(N):
-                    if atom_type[j] in neigh_type and i!=j:
-                        xaxis_possible_atom.append(j)
-
-                dist = numpy.linalg.norm(pos[i,:] - pos[xaxis_possible_atom,:], axis=1)
-
-
-                xaxis_at_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
-                xaxis_at = xaxis_possible_atom[xaxis_at_index]
-
-#               just check if it's not a connection
-                if xaxis_at not in connections[i]:
-#                    print 'For atom %i+1, x axis define atom is %i+1, which is not bonded'%(i,xaxis_at)
-                    for jj in connections[i]:
-                        if jj in xaxis_possible_atom:
-                            print 'For atom %i+1, there was a bonded connnection available for x axis, but was not used'%(i)
-
-                xaxis_type = atom_type[xaxis_at]
-
-                xaxis_possible = []
-                for j in range(len(zaxis_possible)):
-                    if xaxis_type == zaxis_possible[j][2]:
-                        xaxis_possible.append(zaxis_possible[j])
-
-                if len(xaxis_possible)==0:
-                    print 'For atom %i+1 there is no possible multipole'%i
-                if len(xaxis_possible)>1:
-                    print 'For atom %i+1 there is more than 1 possible multipole, use last one'%i
-
-            else:
-                xaxis_possible = zaxis_possible
-
-        else:
-            xaxis_possible = atom_possible
-        
-        multipole = xaxis_possible[-1]
 
 #       Find local axis
 #       Find z defining atom (needs to be bonded)
@@ -343,24 +351,46 @@ def read_tinker(filename, REAL):
                     print 'Two (or more) possible z defining atoms for atom %i+1, using the first one'%i
 
 #       Find x defining atom (no need to be bonded)
+#       First, look within 1-2 bonded atoms
         x_atom = -1
-        neigh_type = multipole[2]
 
-        x_possible_atom = []
-        for j in range(N):
-            if atom_type[j] == neigh_type and i != j and j != z_atom:
-                x_possible_atom.append(j)
+        for k in connections[i]:
+            neigh_type = atom_type[k]
+            if neigh_type == multipole[2] and k!=z_atom:
+                if x_atom == -1:
+                    x_atom = k
+                else:
+                    print 'Two (or more) possible x defining atoms in 1-2 for atom %i+1, using the first one'%i
 
-        dist = numpy.linalg.norm(pos[i,:] - pos[x_possible_atom,:], axis=1)
+#       Next, look within 1-3 bonded atoms
+        if x_atom==-1:
+            for k in connections[i]:
+                for l in connections[k]:
+                    neigh_type = atom_type[l]
+                    if neigh_type == multipole[2] and l!=i and l!=z_atom:
+                        if x_atom == -1:
+                            x_atom = l
+                        else:
+                            print 'Two (or more) possible x defining atoms in 1-3 for atom %i+1, using the first one'%i
 
-        x_atom_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
-        x_atom = x_possible_atom[x_atom_index]
+#       Else, look within nonbonded atoms
+        if x_atom==-1:
+            neigh_type = multipole[2]
+            x_possible_atom = []
+            for j in range(N):
+                if atom_type[j] == neigh_type and i != j and j != z_atom:
+                    x_possible_atom.append(j)
+
+            dist = numpy.linalg.norm(pos[i,:] - pos[x_possible_atom,:], axis=1)
+
+            x_atom_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
+            x_atom = x_possible_atom[x_atom_index]
 
 #       just check if it's not a connection
-        if x_atom not in connections[i]:
-            for jj in connections[i]:
-                if jj in x_possible_atom and jj!=z_atom:
-                    print 'For atom %i+1, there was a bonded atom that could have been x-defining, but is not'
+#        if x_atom not in connections[i]:
+#            for jj in connections[i]:
+#                if jj in x_possible_atom and jj!=z_atom:
+#                    print 'For atom %i+1, there was a bonded atom that could have been x-defining, but is not'
 
         r12 = pos[z_atom,:] - pos[i,:]
         r13 = pos[x_atom,:] - pos[i,:]
@@ -399,7 +429,13 @@ def read_tinker(filename, REAL):
 #        if i==3:
 #            print z_atom, x_atom
 #        print Q[i,:,:]
+#        test[i,0] = charge[multipole]
+#        test[i,1:4] = dipole[multipole]
+#        test[i,4:13] = numpy.ravel(quadrupole[multipole])
+        test[i,0] = z_atom
+        test[i,1] = x_atom
 
+    numpy.savetxt('test',test)
     return pos, q, p, Q, alpha, mass, polar_group, thole, N
 
 
