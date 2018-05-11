@@ -195,7 +195,7 @@ def read_tinker(filename, REAL):
     q     = numpy.zeros(N)
     p     = numpy.zeros((N,3))
     Q     = numpy.zeros((N,3,3))
-    test  = numpy.zeros((N,2))
+#    test  = numpy.zeros((N,2))
     alpha = numpy.zeros((N,3,3))
     thole = numpy.zeros(N)
     mass  = numpy.zeros(N)
@@ -432,10 +432,10 @@ def read_tinker(filename, REAL):
 #        test[i,0] = charge[multipole]
 #        test[i,1:4] = dipole[multipole]
 #        test[i,4:13] = numpy.ravel(quadrupole[multipole])
-        test[i,0] = z_atom
-        test[i,1] = x_atom
+#        test[i,0] = z_atom
+#        test[i,1] = x_atom
 
-    numpy.savetxt('test',test)
+#    numpy.savetxt('test',test)
     return pos, q, p, Q, alpha, mass, polar_group, thole, N
 
 
