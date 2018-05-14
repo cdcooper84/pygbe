@@ -436,6 +436,30 @@ def read_tinker(filename, REAL):
 #        test[i,1] = x_atom
 
 #    numpy.savetxt('test',test)
+
+#   Find group connections (1-2)
+    N_group = numpy.max(polar_group)+1
+    connections_group = numpy.empty(N_group, dtype=object)
+    N_connections_group = numpy.zeros(N_group, dtype=numpy.int32)
+    for i in range(N_group):
+        connections_group[i] = numpy.array([], dtype=numpy.int32)
+
+    for i in range(N):
+        for j in connections[i]:
+            if polar_group[i]!=polar_group[j] and (polar_group[j] not in connections_group[polar_group[i]]):
+                connections_group[polar_group[i]] = numpy.append(connections_group[polar_group[i]], polar_group[j])
+                N_connections_group[polar_group[i]] += 1 
+
+#   Find group 1-3, 1-4 and 1-5 connections
+    connections_group_13 = numpy.empty(N_group, dtype=object)
+    for i in range(N_group):
+        connections_group_13[i] = numpy.array([], dtype=numpy.int32)
+        for j in connections_group[i]:
+            for k in connections_group[j]:
+                if i!=k and k not in connections_group_13[i]:
+                    connections_group_13[i] = numpy.append(connections_group_13[i], k)
+
+
     return pos, q, p, Q, alpha, mass, polar_group, thole, N
 
 
