@@ -202,6 +202,7 @@ def read_tinker(filename, REAL):
     atom_type  = numpy.chararray(N, itemsize=10)
     connections = numpy.empty(N, dtype=object)
     polar_group = -numpy.ones(N, dtype=numpy.int32)
+    N_connections = 0
     header = 0
     for line in file(file_xyz):
         line = line.split()
@@ -213,6 +214,7 @@ def read_tinker(filename, REAL):
             pos[atom_number,2] = REAL(line[4])
             atom_type[atom_number] = line[5]
             connections[atom_number] = numpy.zeros(len(line)-6, dtype=int)
+            N_connections += len(line)-6
             for i in range(6, len(line)):
                 connections[atom_number][i-6] = int(line[i]) - 1 
 
@@ -248,6 +250,23 @@ def read_tinker(filename, REAL):
                 thole_factor[line[1]] = REAL(line[3])
                 polar_group_list[line[1]] = numpy.chararray(len(line)-4, itemsize=10)
                 polar_group_list[line[1]][:] = line[4:]
+
+            if line[0].lower()=='mpole-12-scale':
+                m12scale = REAL(line[1])
+            if line[0].lower()=='mpole-13-scale':
+                m13scale = REAL(line[1])
+            if line[0].lower()=='mpole-14-scale':
+                m14scale = REAL(line[1])
+            if line[0].lower()=='mpole-15-scale':
+                m15scale = REAL(line[1])
+            if line[0].lower()=='polar-12-scale':
+                p12scale = REAL(line[1])
+            if line[0].lower()=='polar-13-scale':
+                p13scale = REAL(line[1])
+            if line[0].lower()=='polar-14-scale':
+                p14scale = REAL(line[1])
+            if line[0].lower()=='polar-15-scale':
+                p15scale = REAL(line[1])
 
             if line[0].lower()=='multipole' or (multipole_flag>0 and multipole_flag<5):
 
@@ -426,18 +445,35 @@ def read_tinker(filename, REAL):
                     for m in range(3):
                         Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2/3.
 
-#        if i==3:
-#            print z_atom, x_atom
-#        print Q[i,:,:]
-#        test[i,0] = charge[multipole]
-#        test[i,1:4] = dipole[multipole]
-#        test[i,4:13] = numpy.ravel(quadrupole[multipole])
-#        test[i,0] = z_atom
-#        test[i,1] = x_atom
+#   Connections list
+#   1-2 connections (already computed, just put into 1D array)
+    connections_12 = numpy.zeros(N_connections, dtype=numpy.int32)
+    pointer_connections_12 = numpy.zeros(N+1, dtype=numpy.int32)    # pointer to beginning of interaction list
+    for i in range(N):
+        pointer_connections_12[i+1] = pointer_connections_12[i] + len(connections[i])
+        start = pointer_connections_12[i]
+        stop = pointer_connections_12[i+1]
+        connections_12[start:stop] = connections[i]
 
-#    numpy.savetxt('test',test)
+#   1-3 connections
+    connections_13 = numpy.zeros(N_connections*N_connections/N, dtype=numpy.int32)
+    pointer_connections_13 = numpy.zeros(N+1, dtype=numpy.int32)    # pointer to beginning of interaction list
+    for i in range(N):
+        possible_connections = numpy.concatenate(connections[connections[i]])
+        possible_connections = numpy.unique(possible_connections) # filter out repeated connections 
+        index_self = numpy.where(possible_connections==i)[0] # remove self atom
+        possible_connections = numpy.delete(possible_connections, index_self)
+        pointer_connections_13[i+1] = pointer_connections_13[i] + len(possible_connections) 
+    
+        start = pointer_connections_13[i]
+        end   = pointer_connections_13[i+1]
+        connections_13[start:end] = possible_connections 
 
-#   Find group connections (1-2)
+    connections_13 = connections_13[:pointer_connections_13[-1]]
+
+
+    ''' No need!
+#   Find group connections (1-2) 
     N_group = numpy.max(polar_group)+1
     connections_group = numpy.empty(N_group, dtype=object)
     N_connections_group = numpy.zeros(N_group, dtype=numpy.int32)
@@ -450,17 +486,70 @@ def read_tinker(filename, REAL):
                 connections_group[polar_group[i]] = numpy.append(connections_group[polar_group[i]], polar_group[j])
                 N_connections_group[polar_group[i]] += 1 
 
-#   Find group 1-3, 1-4 and 1-5 connections
-    connections_group_13 = numpy.empty(N_group, dtype=object)
+#   Put connections in 1D array
+    pointer_connections_12 = numpy.zeros(N_group+1, dtype=numpy.int32) # Pointer to beginning of interaciton list
+    connections_group_12 = numpy.zeros(numpy.sum(N_connections_group), dtype=numpy.int32)
     for i in range(N_group):
-        connections_group_13[i] = numpy.array([], dtype=numpy.int32)
-        for j in connections_group[i]:
-            for k in connections_group[j]:
-                if i!=k and k not in connections_group_13[i]:
-                    connections_group_13[i] = numpy.append(connections_group_13[i], k)
+        pointer_connections_12[i+1] = pointer_connections_12[i]+N_connections_group[i]
+        connections_group_12[pointer_connections_12[i]:pointer_connections_12[i+1]] = connections_group[i]
 
+#   Find group 1-3, 1-4 and 1-5 connections (check if can be done with numpy.unique)
+    pointer_connections_13 = numpy.zeros(N_group+1, dtype=numpy.int32) # Pointer to beginning of interaciton list
+    pointer_connections_14 = numpy.zeros(N_group+1, dtype=numpy.int32) # Pointer to beginning of interaciton list
+    pointer_connections_15 = numpy.zeros(N_group+1, dtype=numpy.int32) # Pointer to beginning of interaciton list
 
-    return pos, q, p, Q, alpha, mass, polar_group, thole, N
+#   Oversize arrays to avoid append
+    connections_group_13 = numpy.zeros(N_group*N_group, dtype=numpy.int32)
+    connections_group_14 = numpy.zeros(N_group*N_group, dtype=numpy.int32)
+    connections_group_15 = numpy.zeros(N_group*N_group, dtype=numpy.int32)
+    for i in range(N_group):
+
+#       1-3 group connections (connection of 1-2 connections)
+        possible_connections = numpy.concatenate(connections_group[connections_group[i]])
+        possible_connections = numpy.unique(possible_connections) # filter out repeated groups
+        index_self = numpy.where(possible_connections==i)[0] # remove self group
+        possible_connections = numpy.delete(possible_connections, index_self)
+        pointer_connections_13[i+1] = pointer_connections_13[i] + len(possible_connections) 
+        
+        start = pointer_connections_13[i]
+        end   = pointer_connections_13[i+1]
+        connections_group_13[start:end] = possible_connections 
+        
+#       1-4 group connections (connections of 1-3 connections)
+        possible_connections = numpy.concatenate(connections_group[connections_group_13[start:end]])
+        possible_connections = numpy.unique(possible_connections) # filter out repeated groups
+        start_12 = pointer_connections_12[i]
+        end_12   = pointer_connections_12[i+1]
+        index_12 = numpy.where(possible_connections==connections_group_12[start_12:end_12])[0] # remove groups already in 1-2
+        possible_connections = numpy.delete(possible_connections, index_12)
+        pointer_connections_14[i+1] = pointer_connections_14[i] + len(possible_connections) 
+        
+        start = pointer_connections_14[i]
+        end   = pointer_connections_14[i+1]
+        connections_group_14[start:end] = possible_connections 
+ 
+#       1-5 group connections (connections of 1-4 connections)
+        possible_connections = numpy.concatenate(connections_group[connections_group_14[start:end]])
+        possible_connections = numpy.unique(possible_connections) # filter out repeated groups
+        start_13 = pointer_connections_13[i]
+        end_13   = pointer_connections_13[i+1]
+        index_13 = numpy.where(possible_connections==connections_group_13[start_13:end_13])[0] # remove groups already in 1-3
+        possible_connections = numpy.delete(possible_connections, index_13)
+        pointer_connections_15[i+1] = pointer_connections_15[i] + len(possible_connections) 
+        
+        start = pointer_connections_15[i]
+        end   = pointer_connections_15[i+1]
+        connections_group_15[start:end] = possible_connections 
+
+    connections_group_13 = connections_group_13[:pointer_connections_13[-1]]
+    connections_group_14 = connections_group_14[:pointer_connections_14[-1]]
+    connections_group_15 = connections_group_15[:pointer_connections_15[-1]]
+    '''
+
+    return pos, q, p, Q, alpha, mass, polar_group, thole, \
+           connections_12, connections_13, \
+           pointer_connections_12, pointer_connections_13, \
+           p12scale, p13scale, N 
 
 
 def read_tinker_pqr(filename, REAL):

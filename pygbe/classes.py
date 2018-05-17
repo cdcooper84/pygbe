@@ -153,6 +153,14 @@ class fields():
         self.alpha  = []    # value of polarizability
         self.mass   = []    # atom's mass
         self.polar_group = [] # Polarization group (from AMOEBA)
+        self.connections_12 = [] # 1-2 connections of groups in 1D array
+        self.connections_13 = [] # 1-3 connections of groups in 1D array
+        self.connections_14 = [] # 1-4 connections of groups in 1D array
+        self.connections_15 = [] # 1-5 connections of groups in 1D array
+        self.pointer_connections_12 = [] # pointer to start of 1-2 connections of groups in 1D array
+        self.pointer_connections_13 = [] # pointer to start of 1-3 connections of groups in 1D array
+        self.pointer_connections_14 = [] # pointer to start of 1-4 connections of groups in 1D array
+        self.pointer_connections_15 = [] # pointer to start of 1-5 connections of groups in 1D array
         self.thole  = []    # Thole factor for damping polarization
         self.coul   = []    # 1: perform Coulomb interaction calculation
                             # 0: don't do Coulomb calculation
@@ -226,6 +234,14 @@ class parameters():
         self.E_field       = []              # Regions where energy will be calculated
         self.GPU           = -1              # =1: with GPU, =0: no GPU
         self.args          = []              # stores the command-line arguments 
+        self.m12scale      = 0               # scaling factor for 1-2 atom groups (AMOEBA)
+        self.m13scale      = 0               # scaling factor for 1-3 atom groups (AMOEBA)
+        self.m14scale      = 0               # scaling factor for 1-4 atom groups (AMOEBA)
+        self.m15scale      = 0               # scaling factor for 1-5 atom groups (AMOEBA)
+        self.p12scale      = 0               # scaling factor for 1-2 atom groups (AMOEBA)
+        self.p13scale      = 0               # scaling factor for 1-3 atom groups (AMOEBA)
+        self.p14scale      = 0               # scaling factor for 1-4 atom groups (AMOEBA)
+        self.p15scale      = 0               # scaling factor for 1-5 atom groups (AMOEBA)
 
 
 class index_constant():
@@ -876,13 +892,24 @@ def initializeField(filename, param):
         field_aux.coulomb = int(coulomb[i])                         # do/don't coulomb interaction
         if int(charges[i])==1:                                      # if there are charges
             if param.args.polarizable:
-                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker(qfile[i], param.REAL)   # read charges
+                xq,q,p,Q,alpha,mass,polar_group,thole, \
+                connections_12, connections_13, \
+                pointer_connections_12, pointer_connections_13, \
+                p12scale, p13scale, Nq = read_tinker(qfile[i], param.REAL)   # read charges
+
+                param.p12scale = p12scale
+                param.p13scale = p13scale
+
 #                xq,q,p,Q,alpha,mass,polar_group,thole,Nq = read_tinker_pqr(qfile[i], param.REAL)   # read charges
                 print '\nReading tinker files for region %i from '%i+qfile[i]
             else:
                 polar_group = 0 # dummy
                 thole = 0       # dummy
                 mass = 0        # dummy
+                connections_12 = 0 #dummy
+                connections_13 = 0 #dummy
+                pointer_connections_12 = 0 #dummy
+                pointer_connections_13 = 0 #dummy
                 if qfile[i][-4:]=='.crd':
                     xq,q,Nq = readcrd(qfile[i], param.REAL)             # read charges
                     print '\nReading crd for region %i from '%i+qfile[i]
@@ -895,6 +922,10 @@ def initializeField(filename, param):
             field_aux.Q = Q                                         # quadrupole values
             field_aux.alpha = alpha                                 # polarizabilities
             field_aux.polar_group = polar_group                     # Polarization group
+            field_aux.connections_12 = connections_12               # Polarization group 1-2 connections
+            field_aux.connections_13 = connections_13               # Polarization group 1-3 connections
+            field_aux.pointer_connections_12 = pointer_connections_12   # Polarization group 1-2 pointer connections
+            field_aux.pointer_connections_13 = pointer_connections_13   # Polarization group 1-3 pointer connections
             field_aux.thole = thole                                 # Thole factor values
             field_aux.mass = mass                                   # atom mass values
 

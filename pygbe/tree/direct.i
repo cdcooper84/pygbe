@@ -68,7 +68,13 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
-                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, double *K_aux, int K_auxSize);
+                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, 
+                        int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
+                        double p12scale, double p13scale, double *K_aux, int K_auxSize);
 
 extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
@@ -80,6 +86,10 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
                         double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
                         double *thole, int tholeSize, int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
                         double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %}
@@ -174,6 +184,10 @@ import_array();
 %apply (double* IN_ARRAY1, int DIM1){(double *alphazz, int alphazzSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *thole, int tholeSize)};
 %apply (int* IN_ARRAY1, int DIM1){(int *polar_group, int polar_groupSize)};
+%apply (int* IN_ARRAY1, int DIM1){(int *connections_12, int connections_12Size)};
+%apply (int* IN_ARRAY1, int DIM1){(int *pointer_connections_12, int pointer_connections_12Size)};
+%apply (int* IN_ARRAY1, int DIM1){(int *connections_13, int connections_13Size)};
+%apply (int* IN_ARRAY1, int DIM1){(int *pointer_connections_13, int pointer_connections_13Size)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mKc, int mKcSize)};
 %apply (double* IN_ARRAY1, int DIM1){(double *mVc, int mVcSize)};
 %apply (int* IN_ARRAY1, int DIM1){(int *targets, int targetsSize)};
@@ -250,7 +264,13 @@ extern void coulomb_energy_multipole(double *xt, int xtSize, double *yt, int ytS
                         double *Qxx, int QxxSize, double *Qxy, int QxySize, double *Qxz, int QxzSize, 
                         double *Qyx, int QyxSize, double *Qyy, int QyySize, double *Qyz, int QyzSize, 
                         double *Qzx, int QzxSize, double *Qzy, int QzySize, double *Qzz, int QzzSize, 
-                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, double *K_aux, int K_auxSize);
+                        double *alphaxx, int alphaxxSize, double *thole, int tholeSize, 
+                        int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
+                        double p12scale, double p13scale, double *K_aux, int K_auxSize);
 
 extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSize, double *zt, int ztSize, 
                         double *q, int qSize, double *px, int pxSize, double *py, int pySize, double *pz, int pzSize, 
@@ -262,6 +282,10 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
                         double *alphayx, int alphayxSize, double *alphayy, int alphayySize, double *alphayz, int alphayzSize, 
                         double *alphazx, int alphazxSize, double *alphazy, int alphazySize, double *alphazz, int alphazzSize, 
                         double *thole, int tholeSize, int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
                         double *dphix_reac, int dphix_reacSize, double *dphiy_reac, int dphiy_reacSize, double *dphiz_reac, int dphiz_reacSize, double E);
 
 %clear (double *K_aux, int K_auxSize); 
@@ -349,6 +373,10 @@ extern void compute_induced_dipole(double *xt, int xtSize, double *yt, int ytSiz
 %clear (double *alphazz, int alphazzSize);
 %clear (double *thole, int tholeSize);
 %clear (int *polar_group, int polar_groupSize);
+%clear (int *connections_12, int connections_12Size);
+%clear (int *pointer_connections_12, int pointer_connections_12Size);
+%clear (int *connections_13, int connections_13Size);
+%clear (int *pointer_connections_13, int pointer_connections_13Size);
 %clear (double *mKc, int mKcSize);
 %clear (double *mVc, int mVcSize);
 %clear (int *targets, int targetsSize); 

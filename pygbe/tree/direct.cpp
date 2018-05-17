@@ -1310,7 +1310,10 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
 }
 
 void coulomb_phi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
-                                  REAL *alpha, REAL *thole, REAL *phi, int N)
+                                  REAL *alpha, REAL *thole, int *polar_group, 
+                                  int *connections_12, int *pointer_connections_12,
+                                  int *connections_13, int *pointer_connections_13,
+                                  REAL p12scale, REAL p13scale, REAL *phi, int N)
 {
 	REAL r, r3, r5;
 	REAL eps = 1e-15;
@@ -1318,13 +1321,36 @@ void coulomb_phi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *p
 	REAL dkl, dkm;
     REAL scale3 = 1.0;
     REAL damp, gamma, expdamp;
+    int start_12, stop_12, start_13, stop_13;
+    REAL pscale;
 
 
     for (int i=0; i<N; i++)
     {
         sum = 0.0;
+        start_12 = pointer_connections_12[i]; 
+        stop_12 = pointer_connections_12[i+1]; 
+        start_13 = pointer_connections_13[i]; 
+        stop_13 = pointer_connections_13[i+1]; 
         for (int j=0; j<N; j++)
         {
+            pscale = 1.0;
+            for (int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==j)
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for (int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==j)
+                {
+                    pscale = p13scale;
+                }
+            }
+
             Ri[0] = xt[i] - xt[j]; 
             Ri[1] = yt[i] - yt[j]; 
             Ri[2] = zt[i] - zt[j]; 
@@ -1342,18 +1368,22 @@ void coulomb_phi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *p
             {
                 for (int k=0; k<3; k++)
                 {
-                    T1[k] = Ri[k]*r3*scale3;
+                    T1[k] = Ri[k]*r3*scale3*pscale;
                 }                          
                 sum += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
             }
         }
+
         phi[i] += sum;
     }
 
 }
 
 void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
-                                  REAL *alpha, REAL *thole, REAL dphi[][3], int N)
+                                  REAL *alpha, REAL *thole, int *polar_group, 
+                                  int *connections_12, int *pointer_connections_12,
+                                  int *connections_13, int *pointer_connections_13,
+                                  REAL p12scale, REAL p13scale, REAL dphi[][3], int N)
 {
 	REAL r, r3, r5;
 	REAL eps = 1e-15;
@@ -1362,14 +1392,38 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
     REAL scale3 = 1.0;
     REAL scale5 = 1.0;
     REAL damp, gamma, expdamp;
+    int start_12, stop_12, start_13, stop_13;
+    REAL pscale;
 
     for (int i=0; i<N; i++)
     {
         sum[0] = 0;
         sum[1] = 0;
         sum[2] = 0;
+        start_12 = pointer_connections_12[i]; 
+        stop_12 = pointer_connections_12[i+1]; 
+        start_13 = pointer_connections_13[i]; 
+        stop_13 = pointer_connections_13[i+1]; 
+
         for (int j=0; j<N; j++)
         {
+            pscale = 1.0;
+            for (int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==j)
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for (int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==j)
+                {
+                    pscale = p13scale;
+                }
+            }
+
             Ri[0] = xt[i] - xt[j];
             Ri[1] = yt[i] - yt[j];
             Ri[2] = zt[i] - zt[j];
@@ -1392,7 +1446,7 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
                     for (int l=0; l<3; l++)
                     {
                         dkl = (REAL)(k==l);
-                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
+                        T1[l] = scale3*dkl*r3*pscale - scale5*3*Ri[k]*Ri[l]*r5*pscale;
                     }
 
                     sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -1406,7 +1460,10 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
 }
 
 void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *py, REAL *pz, 
-                                  REAL *alpha, REAL *thole, REAL ddphi[][3][3], int N)
+                                  REAL *alpha, REAL *thole, int *polar_group, 
+                                  int *connections_12, int *pointer_connections_12,
+                                  int *connections_13, int *pointer_connections_13,
+                                  REAL p12scale, REAL p13scale, REAL ddphi[][3][3], int N)
 {
 	REAL r, r3, r5, r7;
 	REAL eps = 1e-15;
@@ -1416,6 +1473,8 @@ void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL 
     REAL scale5 = 1.0;
     REAL scale7 = 1.0;
     REAL damp, gamma, expdamp;
+    int start_12, stop_12, start_13, stop_13;
+    REAL pscale; 
 
     for (int i=0; i<N; i++)
     {
@@ -1428,8 +1487,31 @@ void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL 
         sum[2][0] = 0.0;
         sum[2][1] = 0.0;
         sum[2][2] = 0.0;
+
+        start_12 = pointer_connections_12[i]; 
+        stop_12 = pointer_connections_12[i+1]; 
+        start_13 = pointer_connections_13[i]; 
+        stop_13 = pointer_connections_13[i+1]; 
+
         for (int j=0; j<N; j++)
         {
+            pscale = 1.0;
+            for (int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==j)
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for (int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==j)
+                {
+                    pscale = p13scale;
+                }
+            }
+
             Ri[0] = xt[i] - xt[j]; 
             Ri[1] = yt[i] - yt[j]; 
             Ri[2] = zt[i] - zt[j]; 
@@ -1458,7 +1540,8 @@ void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL 
                         {
                             dkm = (REAL)(k==m);
                             dlm = (REAL)(l==m);
-                            T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5 + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7;
+                            T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5*pscale 
+                                    + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7*pscale;
                                                     
                         }
                         sum[k][l] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -1484,7 +1567,13 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
                         REAL *Qxx, int QxxSize, REAL *Qxy, int QxySize, REAL *Qxz, int QxzSize, 
                         REAL *Qyx, int QyxSize, REAL *Qyy, int QyySize, REAL *Qyz, int QyzSize, 
                         REAL *Qzx, int QzxSize, REAL *Qzy, int QzySize, REAL *Qzz, int QzzSize, 
-                        REAL *alphaxx, int alphaxxSize, REAL *thole, int tholeSize, REAL *K_aux, int K_auxSize)
+                        REAL *alphaxx, int alphaxxSize, REAL *thole, int tholeSize, 
+                        int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
+                        REAL p12scale, REAL p13scale, REAL *K_aux, int K_auxSize)
 {
     double phi  [xtSize];
     double dphi [xtSize][3];
@@ -1531,10 +1620,20 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
 
     // phi, dphi and ddphi from induced dipoles
 
-    coulomb_phi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, phi, xtSize);
-    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, dphi, xtSize);
-    coulomb_ddphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, ddphi, xtSize);
+    coulomb_phi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole,
+                                polar_group, connections_12, pointer_connections_12, 
+                                connections_13, pointer_connections_13, 
+                                p12scale, p13scale, phi, xtSize);
 
+    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole,
+                                  polar_group, connections_12, pointer_connections_12, 
+                                  connections_13, pointer_connections_13, 
+                                  p12scale, p13scale, dphi, xtSize);
+
+    coulomb_ddphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, 
+                                  polar_group, connections_12, pointer_connections_12, 
+                                  connections_13, pointer_connections_13, 
+                                  p12scale, p13scale, ddphi, xtSize);
 
 
     for (int i=0; i<xtSize; i++)
@@ -1558,10 +1657,17 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                         REAL *alphaxx, int alphaxxSize, REAL *alphaxy, int alphaxySize, REAL *alphaxz, int alphaxzSize, 
                         REAL *alphayx, int alphayxSize, REAL *alphayy, int alphayySize, REAL *alphayz, int alphayzSize, 
                         REAL *alphazx, int alphazxSize, REAL *alphazy, int alphazySize, REAL *alphazz, int alphazzSize, 
-                        REAL *thole, int tholeSize, int *polar_group, int polar_groupSize, REAL *dphix_reac, int dphix_reacSize, 
+                        REAL *thole, int tholeSize, int *polar_group, int polar_groupSize, 
+                        int *connections_12, int connections_12Size, 
+                        int *pointer_connections_12, int pointer_connections_12Size,
+                        int *connections_13, int connections_13Size, 
+                        int *pointer_connections_13, int pointer_connections_13Size,
+                        REAL *dphix_reac, int dphix_reacSize, 
                         REAL *dphiy_reac, int dphiy_reacSize, REAL *dphiz_reac, int dphiz_reacSize, double E)
 {
     double dphi_coul [xtSize][3];
+    double u12scale = 1.0; // mutual-12-scale
+    double u13scale = 1.0; // mutual-13-scale
     
     for (int i=0; i<xtSize; i++)
     {
@@ -1577,7 +1683,10 @@ void compute_induced_dipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *zt
                            Qxx, Qxy, Qxz, Qyx, Qyy, Qyz, Qzx, Qzy, Qzz, alphaxx, 
                            thole, polar_group, flag_polar_group, dphi_coul, xtSize);
 
-    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole, dphi_coul, xtSize);
+    coulomb_dphi_multipole_Thole(xt, yt, zt, px_pol, py_pol, pz_pol, alphaxx, thole,
+                                  polar_group, connections_12, pointer_connections_12, 
+                                  connections_13, pointer_connections_13, 
+                                  u12scale, u13scale, dphi_coul, xtSize);
 
     double SOR = 0.7;
     for (int i=0; i<xtSize; i++)
