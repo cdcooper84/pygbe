@@ -419,7 +419,8 @@ def read_tinker(filename, REAL):
             j_local = numpy.cross(k_local, i_local)
 
         elif multipole[4]=='bisector':
-            k_local = (r12+r13)/numpy.linalg.norm(r12+r13) 
+            k_local = r12/numpy.linalg.norm(r12) + r13/numpy.linalg.norm(r13) 
+            k_local = k_local/numpy.linalg.norm(k_local)
             i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
             j_local = numpy.cross(k_local, i_local)
            
