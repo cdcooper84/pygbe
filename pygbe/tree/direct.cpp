@@ -1187,6 +1187,7 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
             {
                 gamma = std::min(thole[i], thole[j]);
                 damp = pow(alpha[i]*alpha[j],0.16666667);
+                damp += 1e-12;
                 damp = -gamma*(R3/(damp*damp*damp));
                 expdamp = exp(damp);
                 scale3 = 1 - expdamp;
@@ -1360,6 +1361,7 @@ void coulomb_phi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *p
             
             gamma = std::min(thole[i], thole[j]);
             damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp += 1e-12;
             damp = -gamma*(1/(r3*damp*damp*damp));
             expdamp = exp(damp);
             scale3 = 1 - expdamp;
@@ -1434,6 +1436,7 @@ void coulomb_dphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL *
 
             gamma = std::min(thole[i], thole[j]);
             damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp += 1e-12;
             damp = -gamma*(1/(r3*damp*damp*damp));
             expdamp = exp(damp);
             scale3 = 1 - expdamp;
@@ -1523,6 +1526,7 @@ void coulomb_ddphi_multipole_Thole(REAL *xt, REAL *yt, REAL *zt, REAL *px, REAL 
 
             gamma = std::min(thole[i], thole[j]);
             damp = pow(alpha[i]*alpha[j],0.16666667);
+            damp += 1e-12;
             damp = -gamma*(1/(r3*damp*damp*damp));
             expdamp = exp(damp);
             scale5 = 1 - expdamp*(1-damp);

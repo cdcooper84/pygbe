@@ -400,10 +400,11 @@ def read_tinker(filename, REAL):
                 if atom_type[j] == neigh_type and i != j and j != z_atom:
                     x_possible_atom.append(j)
 
-            dist = numpy.linalg.norm(pos[i,:] - pos[x_possible_atom,:], axis=1)
+            if len(x_possible_atom)>0:
+                dist = numpy.linalg.norm(pos[i,:] - pos[x_possible_atom,:], axis=1)
 
-            x_atom_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
-            x_atom = x_possible_atom[x_atom_index]
+                x_atom_index = numpy.where(numpy.abs(dist - numpy.min(dist))<1e-12)[0][0]
+                x_atom = x_possible_atom[x_atom_index]
 
 #       just check if it's not a connection
 #        if x_atom not in connections[i]:
@@ -411,18 +412,24 @@ def read_tinker(filename, REAL):
 #                if jj in x_possible_atom and jj!=z_atom:
 #                    print 'For atom %i+1, there was a bonded atom that could have been x-defining, but is not'
 
-        r12 = pos[z_atom,:] - pos[i,:]
-        r13 = pos[x_atom,:] - pos[i,:]
-        if multipole[4]=='z_then_x':
-            k_local = r12/numpy.linalg.norm(r12) 
-            i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
-            j_local = numpy.cross(k_local, i_local)
+        if z_atom==-1 or x_atom==-1: # for example, in the sphere case
+            i_local = numpy.array([1,0,0])
+            j_local = numpy.array([0,1,0])
+            k_local = numpy.array([0,0,1])
 
-        elif multipole[4]=='bisector':
-            k_local = r12/numpy.linalg.norm(r12) + r13/numpy.linalg.norm(r13) 
-            k_local = k_local/numpy.linalg.norm(k_local)
-            i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
-            j_local = numpy.cross(k_local, i_local)
+        else:
+            r12 = pos[z_atom,:] - pos[i,:]
+            r13 = pos[x_atom,:] - pos[i,:]
+            if multipole[4]=='z_then_x':
+                k_local = r12/numpy.linalg.norm(r12) 
+                i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
+                j_local = numpy.cross(k_local, i_local)
+
+            elif multipole[4]=='bisector':
+                k_local = r12/numpy.linalg.norm(r12) + r13/numpy.linalg.norm(r13) 
+                k_local = k_local/numpy.linalg.norm(k_local)
+                i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
+                j_local = numpy.cross(k_local, i_local)
            
 #       Assign charge
         q[i] = charge[multipole]
@@ -444,7 +451,7 @@ def read_tinker(filename, REAL):
             for j in range(3):
                 for k in range(3):
                     for m in range(3):
-                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2/3.
+                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2/3. # OJO /3 (See Stone's book)
 
 #   Connections list
 #   1-2 connections (already computed, just put into 1D array)

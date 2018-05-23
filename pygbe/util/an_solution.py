@@ -312,6 +312,8 @@ def computeMultipoleMoment(m, n, q, p, Q, xq):
                + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
     
+    quadrupole *= 2 # there is a 1/2 already considered in Q
+
     return monopole + dipole + quadrupole/6 # divided by 6: see modified Kirkwood Part 2b
 
 def computeYnm_derivatives(m,n,xq_k):
@@ -363,7 +365,49 @@ def coulomb_potential(q, p, Q, xq, E):
             T1 = Ri[j,:]/Rnorm[j]**3
             T2[j,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
 
-            phi[i] += q[j]*T0 + sum(T1[:]*p[j,:]) + 0.5*sum(sum(T2[j,:,:]*Q[j,:,:],axis=1),axis=0)
+            phi[i] += q[j]*T0 + sum(T1[:]*p[j,:]) + sum(sum(T2[j,:,:]*Q[j,:,:],axis=1),axis=0)
+            # 1/2 of the quadrupole component already considered in Q
+
+    phi /= (4*pi*E)
+
+    return phi
+
+def coulomb_potential_thole(p, alpha, xq, E):
+    """
+    Computes the electrostatic potential due to a point dipole 
+    distribution at the position of the multipoles.
+    See equation 29 of amoeba bem document. 
+    Uses Thole damping
+    Inputs:
+    ------- 
+        p: array size (Nx3) with polarizable dipoles
+        alpha: array size (Nx3x3) with polarizabilities (tensor)
+        xq: array size (Nx3) with positions of multipoles
+        E: dielectric constant
+    Returns:
+    -------
+        phi: electrostatic potential at the position of the multipoles
+    """
+
+    phi = zeros(len(xq))
+    T2  = zeros((len(xq),3,3))
+    for i in range(len(xq)):
+        Ri = xq[i]-xq
+        Rnorm = sqrt(sum(Ri*Ri, axis=1))
+
+        for j in where(Rnorm>1e-10)[0]: #remove singularity
+
+            # Thole damping for polarizable dipoles (valid for thole factor=1)
+            damp = (alpha[i,0,0]*alpha[j,0,0])**(0.16666667)
+            damp += 1e-12
+            damp = -(Rnorm[j]/damp)**3
+            expdamp = exp(damp)
+            scale3 = 1 - expdamp
+            scale5 = 1 - expdamp*(1-damp)
+
+            T1 = Ri[j,:]/Rnorm[j]**3 * scale3
+
+            phi[i] += sum(T1[:]*p[j,:]) 
 
     phi /= (4*pi*E)
 
@@ -395,6 +439,7 @@ def coulomb_field(q, p, Q, xq, E):
 
 
         for j in where(Rnorm>1e-10)[0]: #remove singularity
+
             T0[j,:]   = -Ri[j,:]/Rnorm[j]**3
             T1[j,:,:] = identity(3)/Rnorm[j]**3 - 3*ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
 
@@ -412,7 +457,68 @@ def coulomb_field(q, p, Q, xq, E):
             T2[j,:,:,:] = aux
 
             for k in range(3):
-                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0)
+                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0)
+            # 1/2 of the quadrupole component already considered in Q
+
+    Efield /= -(4*pi*E)
+    return Efield
+
+def coulomb_field_thole(q, p, Q, alpha, xq, E):
+    """
+    Computes the electric field due to a point monpole, dipole and quadrupole
+    at the position of the multipoles. The field is defined as E=-nabla*phi.
+    Uses Thole damping.
+    See equation 52 of kirkwood multipole, and Equation 30 of amoeba bem document.
+    Inputs:
+    ------- 
+        q: array size N with charges
+        p: array size (Nx3) with dipoles
+        Q: array size (Nx3x3) with quadrupoles
+        alpha: array size (Nx3x3) with polarizabilities
+        xq: array size (Nx3) with positions of multipoles
+        E: dielectric constant
+    Returns:
+    -------
+        Efield: electric field at the position of the multipoles
+    """
+    Efield = zeros((len(xq),3))
+    T0 = zeros((len(xq),3))
+    T1 = zeros((len(xq),3,3))
+    T2 = zeros((len(xq),3,3,3))
+    for i in range(len(xq)):
+        Ri = xq[i]-xq
+        Rnorm = sqrt(sum(Ri*Ri, axis=1))
+
+
+        for j in where(Rnorm>1e-10)[0]: #remove singularity
+
+            # Thole damping for polarizable dipoles (valid for thole factor=1)
+            damp = (alpha[i,0,0]*alpha[j,0,0])**(0.16666667)
+            damp += 1e-12
+            damp = -(Rnorm[j]/damp)**3
+            expdamp = exp(damp)
+            scale3 = 1 - expdamp
+            scale5 = 1 - expdamp*(1-damp)
+            scale7 = 1 - expdamp*(1-damp+0.6*damp*damp) 
+
+            T0[j,:]   = -Ri[j,:]/Rnorm[j]**3 * scale3
+            T1[j,:,:] = identity(3)/Rnorm[j]**3*scale3 - 3*ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5*scale5
+
+            # the ordering in aux will be k,j,i looking at Eq 52 of kirkwood multipole
+            aux = zeros((3,3,3))
+            for k in range(3):
+                aux[k,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])*Ri[j,k]
+            aux *= -5/Rnorm[j]**7*scale7
+
+            for k in range(3):
+                aux[:,:,k] += identity(3)*Ri[j,k]/Rnorm[j]**5*scale5
+            for k in range(3):
+                aux[:,k,:] += identity(3)*Ri[j,k]/Rnorm[j]**5*scale5
+
+            T2[j,:,:,:] = aux
+
+            for k in range(3):
+                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0) # 1/2 from quadrupole term is already included in Q (Tinker's formulation)
 
     Efield /= -(4*pi*E)
     return Efield
@@ -472,12 +578,71 @@ def coulomb_ddpotential(q, p, Q, xq, E):
                             T2[j,k,l,m,n] = -7*Ri[j,k]*Ri[j,l]*Ri[j,m]*Ri[j,n]/Rnorm[j]**2  \
                                            + Ri[j,m]*Ri[j,n]*dkl + Ri[j,l]*Ri[j,n]*dkm      \
                                            + Ri[j,m]*Ri[j,l]*dkn + Ri[j,k]*Ri[j,n]*dlm      \
-                                           + Ri[j,m]*Ri[j,k]*dln
+                                           + Ri[j,m]*Ri[j,k]*dln                            \
+                                           - (dkm*dln + dlm*dkn)*Rnorm[j]**2/5
             T2 *= -5/Rnorm[j]**7
 
             for k in range(3):
                 for l in range(3):
-                    ddphi[i,k,l] += T0[j,k,l]*q[j] + sum(T1[j,k,l,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,l,:,:]*Q[j,:,:],axis=1),axis=0)
+                    ddphi[i,k,l] += T0[j,k,l]*q[j] + sum(T1[j,k,l,:]*p[j,:]) + sum(sum(T2[j,k,l,:,:]*Q[j,:,:],axis=1),axis=0)
+                    # 1/2 of the quadrupole component already considered in Q
+    
+    ddphi /= (4*pi*E)
+
+    return ddphi
+
+def coulomb_ddpotential_thole(p, alpha, xq, E):
+    """
+    Computes the second derivative of the electrostatic potential due 
+    to a point dipole distribution at the 
+    position of the multipoles. 
+    Uses Thole damping.
+    See equation 29 and 43 of amoeba bem document. 
+
+    Inputs:
+    ------- 
+        p: array size (Nx3) with dipoles
+        alpha: array size (Nx3x3) with polarizabilities
+        xq: array size (Nx3) with positions of multipoles
+        E: dielectric constant
+    Returns:
+    -------
+        ddphi: second derivative of electrostatic potential at the 
+                position of the multipoles
+    """
+    ddphi = zeros((len(xq),3,3))
+    T1 = zeros((len(xq),3,3,3))
+    for i in range(len(xq)):
+        Ri = xq[i]-xq
+        Rnorm = sqrt(sum(Ri*Ri, axis=1))
+
+        for j in where(Rnorm>1e-10)[0]: #remove singularity
+
+            # Thole damping for polarizable dipoles (valid for thole factor=1)
+            damp = (alpha[i,0,0]*alpha[j,0,0])**(0.16666667)
+            damp += 1e-12
+            damp = -(Rnorm[j]/damp)**3
+            expdamp = exp(damp)
+            scale3 = 1 - expdamp
+            scale5 = 1 - expdamp*(1-damp)
+            scale7 = 1 - expdamp*(1-damp+0.6*damp*damp) 
+
+            # the ordering in aux will be k,j,i looking at Eq 52 of kirkwood multipole
+            aux = zeros((3,3,3))
+            for k in range(3):
+                aux[k,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])*Ri[j,k]
+            aux *= 15/Rnorm[j]**7 * scale7
+
+            for k in range(3):
+                aux[:,:,k] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5 * scale5
+                aux[:,k,:] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5 * scale5
+                aux[k,:,:] -= 3*identity(3)*Ri[j,k]/Rnorm[j]**5 * scale5
+
+            T1[j,:,:,:] = aux
+
+            for k in range(3):
+                for l in range(3):
+                    ddphi[i,k,l] += sum(T1[j,k,l,:]*p[j,:]) 
     
     ddphi /= (4*pi*E)
 
@@ -506,14 +671,17 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
     p_pol_prev = ones((len(xq),3))
 
     iteration = 0
-    while dipole_diff>1e-10:
+    SOR = 0.7
+    while dipole_diff>1e-2:
         iteration += 1
         p_tot = p_per + p_pol
     
-        Efield = coulomb_field(q, p_tot, Q, xq, E)
+        Efield = coulomb_field_thole(q, p_tot, Q, alpha, xq, E)
         
         for k in range(len(q)):
-            p_pol[k] = dot(alpha[k],Efield[k])
+            p_pol[k] = p_pol[k]*(1-SOR) + dot(alpha[k],4*pi*Efield[k])*SOR # 4*pi because alpha in Tinker
+                                                                           # comes in atomic units that
+                                                                           # that already include the 1/4pi
 
         dipole_diff = sqrt(sum((linalg.norm(p_pol_prev-p_pol,axis=1))**2)/len(p_pol))
         p_pol_prev = p_pol.copy()
@@ -521,7 +689,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
     print 'Took %i iterations for vacuum induced dipole to converge'%iteration
     return p_pol, Efield
 
-def coulomb_energy_multipole(q, p, Q, p_perm, xq, E):
+def coulomb_energy_multipole(q, p_per, p_pol, Q, alpha, xq, E):
     """
     Computes the Coulomb energy from a collection of point
     multipoles, according to equation 38 of amoeba bem document.
@@ -529,7 +697,8 @@ def coulomb_energy_multipole(q, p, Q, p_perm, xq, E):
     Inputs:
     ------ 
         q : array size N with charges of multipoles
-        p : array size (Nx3) with dipoles of multipoles
+        p_per : array size (Nx3) with permanent dipoles of multipoles
+        p_pol : array size (Nx3) with polarizable dipoles of multipoles
         Q : array size (Nx3x3) with quadrupoles of multipoles
         xq: array size Nx3 with positions of multipoles
     p_perm: array size (Nx3) with permanent dipoles of multipoles
@@ -543,12 +712,20 @@ def coulomb_energy_multipole(q, p, Q, p_perm, xq, E):
     E_0 = 8.854187818e-12
     cal2J = 4.184 
 
-    phi   = coulomb_potential(q, p, Q, xq, E)
-    dphi  = -1*coulomb_field(q, p, Q, xq, E)
-    ddphi = coulomb_ddpotential(q, p, Q, xq, E)
+    phi   = coulomb_potential(q, p_per, Q, xq, E)
+    dphi  = -1*coulomb_field(q, p_per, Q, xq, E)
+    ddphi = coulomb_ddpotential(q, p_per, Q, xq, E)
+
+    dummy1 = zeros((len(q)))        # dummy charges
+    dummy2 = zeros((len(q),3,3))    # dummy quadrupoles
+
+    phi += coulomb_potential_thole(p_pol, alpha, xq, E)
+    dphi += -1*coulomb_field_thole(dummy1, p_pol, dummy2, alpha, xq, E)
+    ddphi += coulomb_ddpotential_thole(p_pol, alpha, xq, E)
 
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
-    E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p_perm*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/6)
+    E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p_per*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/3)
+#   should be 1/6 rathern than 1/3 but 1/2 already inside Q
 
     return E_coul 
 
@@ -617,11 +794,11 @@ def solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
             an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
     p_diss_tot = p + p_pol_diss
-    coulomb_dissolved = coulomb_energy_multipole(q, p_diss_tot, Q, p, xq, E_1)
+    coulomb_dissolved = coulomb_energy_multipole(q, p, p_pol_diss, Q, alpha, xq, E_1)
 
     p_pol_vac, Epol_vac = coulomb_polarizable_dipole(q, p, Q, alpha, xq, E_1)
     p_vac_tot = p + p_pol_vac
-    coulomb_vacuum = coulomb_energy_multipole(q, p_vac_tot, Q, p, xq, E_1)
+    coulomb_vacuum = coulomb_energy_multipole(q, p, p_pol_vac, Q, alpha, xq, E_1)
 
     pol_energy = polarization_energy(p_pol_diss, p_pol_vac, Epol_diss, Epol_vac)
     
@@ -676,13 +853,13 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     p_tot = p.copy()
 
     iterations = 0
-    while dipole_diff>1e-10:
+    while dipole_diff>1e-2:
     
         if iterations>0:
-            coul_field = coulomb_field(q, p_tot, Q, xq, E_1)
+            coul_field = coulomb_field_thole(q, p_tot, Q, alpha, xq, E_1)
             Epol = coul_field - DPHI
             for K in range(len(q)):
-                p_pol[K] = dot(alpha[K],Epol[K])
+                p_pol[K] = dot(alpha[K],Epol[K]*4*pi)
 
         p_tot = p + p_pol
 
@@ -1852,22 +2029,28 @@ print E_inter
 q   = array([1.,-1.,-1.])
 #q   = array([0.])
 p   = array([[0.,1.,0.],[1.,0.,0.],[0.,0.,-1.]])
+#p   = array([[0.,0.,0.],[0.,0.,0.],[0.,0.,-0.]])
 #p   = array([[1.,0.,0.]])
 Q   = array([[[1.,0.,0.],[0.,-1.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,1.,0.],[0.,0.,-1.]],[[1.,0.,0.],[0.,0.,0.],[0.,0.,-1.]]])
-#Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]])
+#Q   = array([[[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]],[[0.,0.,0.],[0.,0.,0.],[0.,0.,0.]]])
 alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]],[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]]) 
 #alpha = array([[[1.,0.,0.],[0.,1.,0.],[0.,0.,1.]]]) 
-xq  = array([[1e-12,1e-12,1e-12],[1.,1.41421356,1.],[-1.,-1.,1.41421356]])
+xq  = array([[1e-12,1e-12,1e-12],[1.,1.414213562,1.],[-1.,-1.,1.414213562]])
 #xq  = array([[1.,1.,1.41421356]])
 #xq  = array([[1e-12,1e-12,1e-12]])
-E_1 = 4.
+E_1 = 1.
 E_2 = 80.
 E_0 = 8.854187818e-12
 R   = 4.
-N   = 20
+N   = 10
 Na  = 6.0221415e23
 a   = 5.
 kappa = 0.125
+
+bohr = 0.52917721067
+p *= bohr
+Q *= bohr**2
+
 
 #energy_sph = an_spherical(q, xq, E_1, E_2, R, N)
 #energy = an_P(q, xq, E_1, E_2, R, kappa, a, N)
@@ -1875,7 +2058,7 @@ kappa = 0.125
 #energy_mult_pol, Epol, p_pol = an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 #energy_mult2 = an_multipole_2(q, p, Q, xq, E_1, E_2, R, N)
 
-#energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
+energy_mult_pol = solvation_energy_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N)
 
 #Ecoul =  coulomb_energy_multipole(q, p, Q, xq, E_1)
 #print Ecoul
