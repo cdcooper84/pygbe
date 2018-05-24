@@ -3265,18 +3265,40 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 
     __device__ void coulomb_phi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
 												REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local, 
-												REAL *thole, REAL thole_local, REAL &phi, int size)
+												REAL *thole, REAL thole_local, 
+                                                int *connections_12, int start_12, int stop_12, REAL p12scale,
+                                                int *connections_13, int start_13, int stop_13, REAL p13scale,
+                                                REAL &phi, int j_start, int size)
 	{
 		REAL r, r3;
 		REAL eps = 1e-15;
 		REAL T1[3], Ri[3], sum; 
 		REAL scale3 = 1.0; 
 		REAL damp, gamma, expdamp;
+        REAL pscale;
 
 
 		sum = 0.0; 
 		for (int j=0; j<size; j++) 
 		{
+
+            pscale = 1.0;
+            for(int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==(j_start+j))
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for(int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==(j_start+j))
+                {
+                    pscale = p13scale;
+                }
+            }
+
 			Ri[0] = x - xq[j]; 
 			Ri[1] = y - yq[j]; 
 			Ri[2] = z - zq[j]; 
@@ -3295,7 +3317,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 			{
 				for (int k=0; k<3; k++) 
 				{
-					T1[k] = Ri[k]*r3*scale3;
+					T1[k] = Ri[k]*r3*scale3*pscale;
 				}                               
 				sum += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
 			}    
@@ -3307,7 +3329,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
     __device__ void coulomb_dphi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
                                                     REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local,
 													REAL *thole, REAL thole_local,
-                                                    REAL &dphix_coul, REAL &dphiy_coul, REAL &dphiz_coul, int size)
+                                                    int *connections_12, int start_12, int stop_12, REAL p12scale,
+                                                    int *connections_13, int start_13, int stop_13, REAL p13scale,
+                                                    REAL &dphix_coul, REAL &dphiy_coul, REAL &dphiz_coul, int j_start, int size)
     {
         REAL r, r3, r5;
         REAL eps = 1e-15;
@@ -3316,12 +3340,30 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 		REAL scale3 = 1.0; 
 		REAL scale5 = 1.0; 
 		REAL damp, gamma, expdamp;
+        REAL pscale;
 
         sum[0] = 0;
         sum[1] = 0;
         sum[2] = 0;
         for (int j=0; j<size; j++)
         {
+            pscale = 1.0;
+            for(int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==(j_start+j))
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for(int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==(j_start+j))
+                {
+                    pscale = p13scale;
+                }
+            }
+
             Ri[0] = x - xq[j];
             Ri[1] = y - yq[j];
             Ri[2] = z - zq[j];
@@ -3345,7 +3387,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                     for (int l=0; l<3; l++)
                     {
                         dkl = (REAL)(k==l);
-                        T1[l] = scale3*dkl*r3 - scale5*3*Ri[k]*Ri[l]*r5;
+                        T1[l] = scale3*dkl*r3*pscale - scale5*3*Ri[k]*Ri[l]*r5*pscale;
                     }
 
                     sum[k] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -3360,9 +3402,12 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
     __device__ void coulomb_ddphi_multipole_Thole_block(REAL x, REAL y, REAL z, REAL *xq, REAL *yq, REAL *zq, 
                                                     REAL *px, REAL *py, REAL *pz, REAL *alpha, REAL alpha_local,
 													REAL *thole, REAL thole_local,
+                                                    int *connections_12, int start_12, int stop_12, REAL p12scale,
+                                                    int *connections_13, int start_13, int stop_13, REAL p13scale,
 												    REAL &ddphixx_coul, REAL &ddphixy_coul, REAL &ddphixz_coul,
 												    REAL &ddphiyx_coul, REAL &ddphiyy_coul, REAL &ddphiyz_coul,
-												    REAL &ddphizx_coul, REAL &ddphizy_coul, REAL &ddphizz_coul, int size)
+												    REAL &ddphizx_coul, REAL &ddphizy_coul, REAL &ddphizz_coul, 
+                                                    int j_start, int size)
 	{
 		REAL r, r3, r5, r7;
 		REAL eps = 1e-15;
@@ -3371,6 +3416,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 		REAL scale5 = 1.0;
 		REAL scale7 = 1.0;
 		REAL damp, gamma, expdamp;
+        REAL pscale;
 
 		sum[0][0] = 0.0;
 		sum[0][1] = 0.0;
@@ -3384,7 +3430,24 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 
 		for (int j=0; j<size; j++)
 		{
-			Ri[0] = x - xq[j];
+            pscale = 1.0;
+            for(int ii=start_12; ii<stop_12; ii++)
+            {
+                if (connections_12[ii]==(j_start+j))
+                {
+                    pscale = p12scale;
+                }
+            }
+
+            for(int ii=start_13; ii<stop_13; ii++)
+            {
+                if (connections_13[ii]==(j_start+j))
+                {
+                    pscale = p13scale;
+                }
+            }
+            
+            Ri[0] = x - xq[j];
 			Ri[1] = y - yq[j];
 			Ri[2] = z - zq[j];
 
@@ -3413,7 +3476,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 						{
 							dkm = (REAL)(k==m);
 							dlm = (REAL)(l==m);
-							T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5 + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7;
+							T1[m] = -3*(dkm*Ri[l]+dkl*Ri[m]+dlm*Ri[k])*r5*scale5*pscale + 15*Ri[l]*Ri[m]*Ri[k]*r7*scale7*pscale;
 
 						}
 						sum[k][l] += T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j];
@@ -3524,6 +3587,8 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                         REAL *alphaxx, REAL *alphaxy, REAL *alphaxz,
                                         REAL *alphayx, REAL *alphayy, REAL *alphayz,
                                         REAL *alphazx, REAL *alphazy, REAL *alphazz, REAL *thole, int *polar_group,
+                                        int *connections_12, int* pointer_connections_12,
+                                        int *connections_13, int* pointer_connections_13,
                                         REAL *dphix_reac, REAL *dphiy_reac, REAL *dphiz_reac,
                                         REAL E, int Nq)
     {
@@ -3547,6 +3612,10 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 		REAL thole_local = thole[I];
 
         int local_polar_group = polar_group[I];
+        int ptr_conn12_start = pointer_connections_12[I];
+        int ptr_conn12_end = pointer_connections_12[I+1];
+        int ptr_conn13_start = pointer_connections_13[I];
+        int ptr_conn13_end = pointer_connections_13[I+1];
 
         for (int block=0; block<(Nq-1)/BSZ; block++)
         {
@@ -3588,7 +3657,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                 coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                                 px_pol_sh, py_pol_sh, pz_pol_sh, 
                                                 alpha_sh, alpha_local, thole_sh, thole_local,
-                                                dphix_coul, dphiy_coul, dphiz_coul, BSZ);
+                                                connections_12, ptr_conn12_start, ptr_conn12_end, 1.0,
+                                                connections_13, ptr_conn13_start, ptr_conn13_end, 1.0,
+                                                dphix_coul, dphiy_coul, dphiz_coul, block*BSZ, BSZ);
             }
         }
 
@@ -3630,7 +3701,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
             coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, 
                                             px_pol_sh, py_pol_sh, pz_pol_sh, 
                                             alpha_sh, alpha_local, thole_sh, thole_local,
-                                            dphix_coul, dphiy_coul, dphiz_coul, (Nq-block*BSZ));
+                                            connections_12, ptr_conn12_start, ptr_conn12_end, 1.0,
+                                            connections_13, ptr_conn13_start, ptr_conn13_end, 1.0,
+                                            dphix_coul, dphiy_coul, dphiz_coul, block*BSZ, (Nq-block*BSZ));
         }
 
         __syncthreads();
@@ -3659,7 +3732,10 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                                              REAL *Qxx, REAL *Qxy, REAL *Qxz, 
                                              REAL *Qyx, REAL *Qyy, REAL *Qyz, 
                                              REAL *Qzx, REAL *Qzy, REAL *Qzz, 
-                                             REAL *alphaxx, REAL *thole, REAL *point_energy, int Nq)
+                                             REAL *alphaxx, REAL *thole, 
+                                             int *connections_12, int* pointer_connections_12,
+                                             int *connections_13, int* pointer_connections_13,
+                                             REAL p12scale, REAL p13scale, REAL *point_energy, int Nq)
     {
         int I = threadIdx.x + blockIdx.x*blockDim.x;
         REAL x, y, z, phi_coul = 0;
@@ -3681,6 +3757,11 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         x = xq[I];
         y = yq[I];
         z = zq[I];
+
+        int ptr_conn12_start = pointer_connections_12[I];
+        int ptr_conn12_end = pointer_connections_12[I+1];
+        int ptr_conn13_start = pointer_connections_13[I];
+        int ptr_conn13_end = pointer_connections_13[I+1];
 
         alpha_local = alphaxx[I]; // Using alphaxx because it is usually a scalar (not tensor)
 		thole_local = thole[I];
@@ -3734,17 +3815,24 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 
                 // Induced dipoles
                 coulomb_phi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
-                                                  alpha_sh, alpha_local, thole_sh, thole_local, phi_coul, BSZ);  
+                                                  alpha_sh, alpha_local, thole_sh, thole_local, 
+                                                  connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                                  connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
+                                                  phi_coul, block*BSZ, BSZ);  
 
                 coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
                                                   alpha_sh, alpha_local, thole_sh, thole_local, 
-                                                  dphix_coul, dphiy_coul, dphiz_coul, BSZ);  
+                                                  connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                                  connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
+                                                  dphix_coul, dphiy_coul, dphiz_coul, block*BSZ, BSZ);
 
                 coulomb_ddphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
                                                   alpha_sh, alpha_local, thole_sh, thole_local, 
+                                                  connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                                  connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
                                                   ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                                   ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
-                                                  ddphizx_coul, ddphizy_coul, ddphizz_coul, BSZ);  
+                                                  ddphizx_coul, ddphizy_coul, ddphizz_coul, block*BSZ, BSZ);  
             }
         }
 
@@ -3795,17 +3883,24 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
 
             // Induced dipoles
             coulomb_phi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
-                                              alpha_sh, alpha_local, thole_sh, thole_local, phi_coul, BSZ);  
+                                              alpha_sh, alpha_local, thole_sh, thole_local, 
+                                              connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                              connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
+                                              phi_coul, block*BSZ, (Nq-block*BSZ));  
 
             coulomb_dphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
                                               alpha_sh, alpha_local, thole_sh, thole_local, 
-                                              dphix_coul, dphiy_coul, dphiz_coul, BSZ);  
+                                              connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                              connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
+                                              dphix_coul, dphiy_coul, dphiz_coul, block*BSZ, (Nq-block*BSZ));
 
             coulomb_ddphi_multipole_Thole_block(x, y, z, xq_sh, yq_sh, zq_sh, px_pol_sh, py_pol_sh, pz_pol_sh,
                                               alpha_sh, alpha_local, thole_sh, thole_local, 
+                                              connections_12, ptr_conn12_start, ptr_conn12_end, p12scale,
+                                              connections_13, ptr_conn13_start, ptr_conn13_end, p13scale,
                                               ddphixx_coul, ddphixy_coul, ddphixz_coul, 
                                               ddphiyx_coul, ddphiyy_coul, ddphiyz_coul, 
-                                              ddphizx_coul, ddphizy_coul, ddphizz_coul, BSZ);  
+                                              ddphizx_coul, ddphizy_coul, ddphizz_coul, block*BSZ, (Nq-block*BSZ));  
 
         }
 

@@ -1052,7 +1052,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
 
                 # Computes the coulomb electric field and the induced dipole
                 # (induced by both the coulomb and reaction fields)
-                if par_reac.GPU==0 or par_reac.GPU==1:
+                if par_reac.GPU==0:
                     px_pol[:] = f.p_pol[:,0]
                     py_pol[:] = f.p_pol[:,1]
                     pz_pol[:] = f.p_pol[:,2]
@@ -1070,7 +1070,7 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                            numpy.int32(f.connections_13), numpy.int32(f.pointer_connections_13),
                                            dphix_reac, dphiy_reac, dphiz_reac, f.E)
 
-                elif par_reac.GPU==10:
+                elif par_reac.GPU==1:
                     GSZ = int(numpy.ceil(float(len(f.q))/par_reac.BSZ)) # CUDA grid size
                     compute_induced_dipole_gpu = kernel.get_function("compute_induced_dipole")
 
@@ -1095,6 +1095,8 @@ def dissolved_polarizable_dipole(surf_array, field_array, par_reac, ind_reac, ke
                                             f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                             f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
                                             f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.thole_gpu, f.polar_group_gpu,
+                                            f.connections_12_gpu, f.pointer_connections_12_gpu,
+                                            f.connections_13_gpu, f.pointer_connections_13_gpu,
                                             dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                             par_reac.REAL(f.E), numpy.int32(len(f.q)), block=(par_reac.BSZ,1,1), grid=(GSZ,1))
 
@@ -1123,7 +1125,7 @@ def coulombEnergy(f, param, kernel):
             point_energy_gpu.get(point_energy)
 
     else: # contains multipoles
-        if param.GPU==0 or param.GPU==1:
+        if param.GPU==0:
             p_polx = numpy.zeros(len(f.xq))
             p_poly = numpy.zeros(len(f.xq))
             p_polz = numpy.zeros(len(f.xq))
@@ -1140,7 +1142,7 @@ def coulombEnergy(f, param, kernel):
                                      numpy.int32(f.connections_12), numpy.int32(f.pointer_connections_12), 
                                      numpy.int32(f.connections_13), numpy.int32(f.pointer_connections_13), 
                                      param.p12scale, param.p13scale, point_energy)
-        elif param.GPU==10:
+        elif param.GPU==1:
 
             GSZ = int(numpy.ceil(float(len(f.q))/param.BSZ)) # CUDA grid size
             coulomb_energy_multipole_gpu = kernel.get_function("coulomb_energy_multipole")
@@ -1161,6 +1163,9 @@ def coulombEnergy(f, param, kernel):
                                          f.Qyx_gpu, f.Qyy_gpu, f.Qyz_gpu,
                                          f.Qzx_gpu, f.Qzy_gpu, f.Qzz_gpu,
                                          f.alphaxx_gpu, f.thole_gpu,
+                                         f.connections_12_gpu, f.pointer_connections_12_gpu,
+                                         f.connections_13_gpu, f.pointer_connections_13_gpu,
+                                         param.p12scale, param.p13scale,
                                          point_energy_gpu, numpy.int32(len(f.q)), 
                                          block=(param.BSZ,1,1), grid=(GSZ,1))
 
@@ -1213,7 +1218,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
     while dipole_diff>param.polar_eps:
         iteration += 1
         
-        if param.GPU==0 or param.GPU==1:
+        if param.GPU==0:
             compute_induced_dipole(f.xq[:,0], f.xq[:,1], f.xq[:,2], f.q, 
                                    f.p[:,0], f.p[:,1], f.p[:,2],
                                    px_pol, py_pol, pz_pol,
@@ -1227,7 +1232,7 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                    numpy.int32(f.connections_12), numpy.int32(f.pointer_connections_12),
                                    numpy.int32(f.connections_13), numpy.int32(f.pointer_connections_13),
                                    dphix_reac, dphiy_reac, dphiz_reac, f.E)
-        elif param.GPU==10:
+        elif param.GPU==1:
 
             dphix_reac_gpu = gpuarray.to_gpu(dphix_reac.astype(param.REAL))
             dphiy_reac_gpu = gpuarray.to_gpu(dphiy_reac.astype(param.REAL))
@@ -1242,6 +1247,8 @@ def coulomb_polarizable_dipole(f, param, kernel):
                                     f.alphaxx_gpu, f.alphaxy_gpu, f.alphaxz_gpu,
                                     f.alphayx_gpu, f.alphayy_gpu, f.alphayz_gpu,
                                     f.alphazx_gpu, f.alphazy_gpu, f.alphazz_gpu, f.thole_gpu, f.polar_group_gpu,
+                                    f.connections_12_gpu, f.pointer_connections_12_gpu,
+                                    f.connections_13_gpu, f.pointer_connections_13_gpu,
                                     dphix_reac_gpu, dphiy_reac_gpu, dphiz_reac_gpu,
                                     param.REAL(f.E), numpy.int32(len(f.q)), block=(param.BSZ,1,1), grid=(GSZ,1))
 

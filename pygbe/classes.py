@@ -193,6 +193,10 @@ class fields():
         self.alphazz_gpu = []   # value of zz polarizability on gpu
         self.polar_group_gpu = [] # Polarization group on gpu
         self.thole_gpu   = []   # Thole damping factor on gpu
+        self.connections_12_gpu = [] # 1-2 connections of groups in 1D array
+        self.connections_13_gpu = [] # 1-3 connections of groups in 1D array
+        self.pointer_connections_12_gpu = [] # pointer to start of 1-2 connections of groups in 1D array
+        self.pointer_connections_13_gpu = [] # pointer to start of 1-3 connections of groups in 1D array
 
 class timings():
     def __init__(self):
@@ -1085,8 +1089,10 @@ def dataTransfer(surf_array, field_array, ind, param, kernel):
                     field_array[f].alphazz_gpu  = gpuarray.to_gpu(field_array[f].alpha[:,2,2].astype(REAL))
                     field_array[f].polar_group_gpu  = gpuarray.to_gpu(field_array[f].polar_group[:].astype(numpy.int32))
                     field_array[f].thole_gpu  = gpuarray.to_gpu(field_array[f].thole[:].astype(REAL))
-                    
-
+                    field_array[f].connections_12_gpu  = gpuarray.to_gpu(field_array[f].connections_12[:].astype(numpy.int32))
+                    field_array[f].connections_13_gpu  = gpuarray.to_gpu(field_array[f].connections_13[:].astype(numpy.int32))
+                    field_array[f].pointer_connections_12_gpu  = gpuarray.to_gpu(field_array[f].pointer_connections_12[:].astype(numpy.int32))
+                    field_array[f].pointer_connections_13_gpu  = gpuarray.to_gpu(field_array[f].pointer_connections_13[:].astype(numpy.int32))
 
 
 def fill_phi(phi, surf_array):
