@@ -242,6 +242,7 @@ class parameters():
         self.p13scale      = 0               # scaling factor for 1-3 atom groups (AMOEBA)
         self.p14scale      = 0               # scaling factor for 1-4 atom groups (AMOEBA)
         self.p15scale      = 0               # scaling factor for 1-5 atom groups (AMOEBA)
+        self.polar_eps     = 0               # induced dipole tolerance in self-consistent iterations (AMOEBA)
 
 
 class index_constant():

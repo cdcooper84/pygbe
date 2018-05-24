@@ -672,7 +672,7 @@ def coulomb_polarizable_dipole(q, p_per, Q, alpha, xq, E):
 
     iteration = 0
     SOR = 0.7
-    while dipole_diff>1e-2:
+    while dipole_diff>1e-6:
         iteration += 1
         p_tot = p_per + p_pol
     
@@ -725,7 +725,7 @@ def coulomb_energy_multipole(q, p_per, p_pol, Q, alpha, xq, E):
 
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
     E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p_per*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/3)
-#   should be 1/6 rathern than 1/3 but 1/2 already inside Q
+#   should be 1/6 rather than 1/3 but 1/2 already inside Q
 
     return E_coul 
 
@@ -853,13 +853,14 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     p_tot = p.copy()
 
     iterations = 0
-    while dipole_diff>1e-2:
+    while dipole_diff>1e-6:
     
         if iterations>0:
             coul_field = coulomb_field_thole(q, p_tot, Q, alpha, xq, E_1)
             Epol = coul_field - DPHI
+            SOR = 0.7
             for K in range(len(q)):
-                p_pol[K] = dot(alpha[K],Epol[K]*4*pi)
+                p_pol[K] = p_pol[K]*(1-SOR) + dot(alpha[K],Epol[K]*4*pi)*SOR
 
         p_tot = p + p_pol
 
@@ -906,7 +907,8 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
 
     print 'Took %i iterations for the dissolved induced dipole to converge'%iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
-    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
+    E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/3)
+    # It should be 1/6 rathern than 1/3, but Tinker's quadrupole has a 1/2 inside already
 
     return E_P, Epol, p_pol
 

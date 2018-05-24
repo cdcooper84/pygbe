@@ -844,6 +844,9 @@ def readParameters(param, filename):
     param.theta     = REAL(val[12])     # MAC criterion for treecode
     param.GPU       = int (val[13])     # =1: use GPU, =0 no GPU
 
+    if len(val)>14:
+        param.polar_eps = REAL(val[14])
+
     return dataType
 
 
