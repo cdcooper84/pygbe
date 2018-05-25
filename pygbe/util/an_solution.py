@@ -312,7 +312,6 @@ def computeMultipoleMoment(m, n, q, p, Q, xq):
                + sum(Q[:,2,1]*grad_gradCartesian[:,2,1]) \
                + sum(Q[:,2,2]*grad_gradCartesian[:,2,2]) 
     
-#    quadrupole *= 2 # there is a 1/2 already considered in Q
 
     return monopole + dipole + quadrupole/6 # divided by 6: see modified Kirkwood Part 2b
 
@@ -366,7 +365,6 @@ def coulomb_potential(q, p, Q, xq, E):
             T2[j,:,:] = ones((3,3))*Ri[j,:]*transpose(ones((3,3))*Ri[j,:])/Rnorm[j]**5
 
             phi[i] += q[j]*T0 + sum(T1[:]*p[j,:]) + 0.5*sum(sum(T2[j,:,:]*Q[j,:,:],axis=1),axis=0)
-            # 1/2 of the quadrupole component already considered in Q
 
     phi /= (4*pi*E)
 
@@ -458,7 +456,6 @@ def coulomb_field(q, p, Q, xq, E):
 
             for k in range(3):
                 Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0)
-            # 1/2 of the quadrupole component already considered in Q
 
     Efield /= -(4*pi*E)
     return Efield
@@ -518,7 +515,7 @@ def coulomb_field_thole(q, p, Q, alpha, xq, E):
             T2[j,:,:,:] = aux
 
             for k in range(3):
-                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0) # 1/2 from quadrupole term is already included in Q (Tinker's formulation)
+                Efield[i,k] += T0[j,k]*q[j] + sum(T1[j,k,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,:,:]*Q[j,:,:],axis=1),axis=0) 
 
     Efield /= -(4*pi*E)
     return Efield
@@ -585,7 +582,6 @@ def coulomb_ddpotential(q, p, Q, xq, E):
             for k in range(3):
                 for l in range(3):
                     ddphi[i,k,l] += T0[j,k,l]*q[j] + sum(T1[j,k,l,:]*p[j,:]) + 0.5*sum(sum(T2[j,k,l,:,:]*Q[j,:,:],axis=1),axis=0)
-                    # 1/2 of the quadrupole component already considered in Q
     
     ddphi /= (4*pi*E)
 
@@ -725,7 +721,6 @@ def coulomb_energy_multipole(q, p_per, p_pol, Q, alpha, xq, E):
 
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
     E_coul = 0.5*cons*(sum(q*phi) + sum(sum(p_per*dphi,axis=1)) + sum(sum(sum(Q*ddphi,axis=2),axis=1))/6)
-#   should be 1/6 rather than 1/3 but 1/2 already inside Q
 
     return E_coul 
 
@@ -908,7 +903,7 @@ def an_multipole_polarizable(q, p, Q, alpha, xq, E_1, E_2, kappa, R, a, N):
     print 'Took %i iterations for the dissolved induced dipole to converge'%iterations
     cons = qe**2*Na*1e-3*1e10/(cal2J*E_0)
     E_P = 0.5*cons*(sum(q*PHI) + sum(sum(p*DPHI,axis=1)) + sum(sum(sum(Q*DDPHI,axis=2),axis=1))/6)
-    # It should be 1/6 rathern than 1/3, but Tinker's quadrupole has a 1/2 inside already
+    
 
     return E_P, Epol, p_pol
 
