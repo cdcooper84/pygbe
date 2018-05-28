@@ -232,7 +232,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                                aux += 6*numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E) # OJO x6!!! This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
+                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E) 
 
 #               For CHILD surfaces, q contributes to RHS in 
 #               EXTERIOR equation (hence Precond[1,:] and [3,:])
@@ -288,7 +288,7 @@ def generateRHS(field_array, surf_array, param, kernel, timing, ind0):
                                 aux1 = numpy.array([[dx_pq*dx_pq, dx_pq*dy_pq, dx_pq*dz_pq],\
                                                     [dy_pq*dx_pq, dy_pq*dy_pq, dy_pq*dz_pq],\
                                                     [dz_pq*dx_pq, dz_pq*dy_pq, dz_pq*dz_pq]])/(2*R_pq**5)
-                                aux += 6*numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)  # OJO x6!!This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same)
+                                aux += numpy.tensordot(field_array[j].Q[i], aux1)/(field_array[j].E)  
 
 #               No preconditioner
 #                F[s_start:s_start+s_size] += aux
@@ -945,7 +945,7 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                                                    field_array[f].p[:,2]*dphiz_reac)
 
                 if len(field_array[f].Q)>0:
-                    E_solv_aux += 0.5*C0*(1/1.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
+                    E_solv_aux += 0.5*C0*(1/6.)*numpy.sum( field_array[f].Q[:,0,0]*dphixx_reac +\
                                                            field_array[f].Q[:,0,1]*dphixy_reac +\
                                                            field_array[f].Q[:,0,2]*dphixz_reac +\
                                                            field_array[f].Q[:,1,0]*dphiyx_reac +\
@@ -954,7 +954,6 @@ def calculateEsolv(surf_array, field_array, param, kernel):
                                                            field_array[f].Q[:,2,0]*dphizx_reac +\
                                                            field_array[f].Q[:,2,1]*dphizy_reac +\
                                                            field_array[f].Q[:,2,2]*dphizz_reac ) 
-                                                           # OJO: not 1/6. This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same)
 
             E_solv.append(E_solv_aux)
 

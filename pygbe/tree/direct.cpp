@@ -1139,7 +1139,7 @@ void coulomb_phi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REAL
                     }
                 }                          
                 sum += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
-                + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
                      + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
                      + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
             }
@@ -1220,7 +1220,7 @@ void coulomb_dphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, REA
                     }
 
                     sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
-                           + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]   // OJO x6
+                           + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]   
                                 + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
                                 + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
                 }                          
@@ -1293,7 +1293,7 @@ void coulomb_ddphi_multipole(REAL *xt, REAL *yt, REAL *zt, REAL *q, REAL *px, RE
                             }
                         }
                         sum[k][l] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j] 
-                               + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
+                               + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]  
                                     + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]  
                                     + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
                     }
@@ -1646,7 +1646,7 @@ void coulomb_energy_multipole(REAL *xt, int xtSize, REAL *yt, int ytSize, REAL *
                   + px[i]*dphi[i][0] + py[i]*dphi[i][1] + pz[i]*dphi[i][2]
                   +(Qxx[i]*ddphi[i][0][0] + Qxy[i]*ddphi[i][0][1] + Qxz[i]*ddphi[i][0][2] 
                   + Qxy[i]*ddphi[i][1][0] + Qyy[i]*ddphi[i][1][1] + Qyz[i]*ddphi[i][1][2] 
-                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/1.); // OJO: not 1/6
+                  + Qxz[i]*ddphi[i][2][0] + Qzy[i]*ddphi[i][2][1] + Qzz[i]*ddphi[i][2][2])/6.); 
                     // Energy calculated with p (rather than p_tot) to account for polarization energy
     }
     

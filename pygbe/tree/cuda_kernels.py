@@ -2950,10 +2950,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                         r2 = dx*dx + dy*dy + dz*dz;
                         r  = sqrt(r2);
 
-                        sum += 6*(Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
+                        sum += (Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
                                +Qyx_sh[i]*dy*dx + Qyy_sh[i]*dy*dy + Qyz_sh[i]*dy*dz 
                                +Qzx_sh[i]*dz*dx + Qzy_sh[i]*dz*dy + Qzz_sh[i]*dz*dz)/(2*r2*r2*r*E_1);
-                                // OJO x6!! This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
                                
                     }
                 }
@@ -2985,10 +2984,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                     r2 = dx*dx + dy*dy + dz*dz;
                     r  = sqrt(r2);
 
-                    sum += 6*(Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
+                    sum += (Qxx_sh[i]*dx*dx + Qxy_sh[i]*dx*dy + Qxz_sh[i]*dx*dz 
                            +Qyx_sh[i]*dy*dx + Qyy_sh[i]*dy*dy + Qyz_sh[i]*dy*dz 
                            +Qzx_sh[i]*dz*dx + Qzy_sh[i]*dz*dy + Qzz_sh[i]*dz*dz)/(2*r2*r2*r*E_1);
-                            // OJO x6!! This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
                 }
             }
 
@@ -3176,10 +3174,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                 }
 
                 sum += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
-                    + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
+                    + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
                          + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
                          + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
-                        // x6 is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
             }
         }
         phi_coul += sum;
@@ -3251,10 +3248,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                     }
 
                     sum[k] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
-                           + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j] // OJO!! x6 
+                           + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j] 
                                 + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
                                 + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
-                                // This is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
                 }
             }
         }
@@ -3558,10 +3554,9 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                         }
 
                         sum[k][l] += T0*q[j] + T1[0]*px[j] + T1[1]*py[j] + T1[2]*pz[j]
-                                   + 6*0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
+                                   + 0.5*(T2[0][0]*Qxx[j] + T2[0][1]*Qxy[j] + T2[0][2]*Qxz[j]
                                         + T2[1][0]*Qyx[j] + T2[1][1]*Qyy[j] + T2[1][2]*Qyz[j]
                                         + T2[2][0]*Qzx[j] + T2[2][1]*Qzy[j] + T2[2][2]*Qzz[j]);
-                                    // x6 is because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
                     }
                 }
             }
@@ -3910,9 +3905,8 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
                       + px[I]*dphix_coul + py[I]*dphiy_coul + pz[I]*dphiz_coul
                       +(Qxx[I]*ddphixx_coul + Qxy[I]*ddphixy_coul + Qxz[I]*ddphixz_coul
                       + Qxy[I]*ddphiyx_coul + Qyy[I]*ddphiyy_coul + Qyz[I]*ddphiyz_coul
-                      + Qxz[I]*ddphizx_coul + Qzy[I]*ddphizy_coul + Qzz[I]*ddphizz_coul)/1.);
+                      + Qxz[I]*ddphizx_coul + Qzy[I]*ddphizy_coul + Qzz[I]*ddphizz_coul)/6.);
                         // Energy calculated with p_tot-p_pol (rather than p_tot) to account for polarization energy
-                        // no 1/6 because the 1/2 is incorporated into Q (see Stone's Theory of intermolecular force) and Q is divided by 3 when read in (TInker does the same) 
         }
 
 

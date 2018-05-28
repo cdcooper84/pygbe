@@ -451,7 +451,7 @@ def read_tinker(filename, REAL):
             for j in range(3):
                 for k in range(3):
                     for m in range(3):
-                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2/3. # OJO /3 (See Stone's book)
+                        Q[i,ii,j] += A[ii,k]*A[j,m]*quadrupole[multipole][k,m]*bohr**2*2 # x2 to agree with Tinker's formulation (they include 1/2 in Q)
 
 #   Connections list
 #   1-2 connections (already computed, just put into 1D array)
