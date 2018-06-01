@@ -846,6 +846,8 @@ def readParameters(param, filename):
 
     if len(val)>14:
         param.polar_eps = REAL(val[14])
+    else:
+        param.polar_eps = 1e-2
 
     return dataType
 
