@@ -3680,6 +3680,7 @@ __global__ void get_d2phirdr2(REAL *ddphir_xx, REAL *ddphir_xy, REAL *ddphir_xz,
         Qzy_sh[threadIdx.x] = Qzy[block*BSZ+threadIdx.x];
         Qzz_sh[threadIdx.x] = Qzz[block*BSZ+threadIdx.x];
         alpha_sh[threadIdx.x] = alphaxx[block*BSZ+threadIdx.x];// using alphaxx as it usually is a scalar
+        thole_sh[threadIdx.x] = thole[block*BSZ+threadIdx.x];
         polar_group_sh[threadIdx.x] = polar_group[block*BSZ+threadIdx.x];
         __syncthreads();
 
