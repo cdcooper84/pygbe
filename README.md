@@ -99,7 +99,7 @@ To run this case, you can use
 
     > pygbe examples/lys
     
-To run any PyGBe case, you can pass `pygbe` a relative or an absolute path to the problem folder. 
+To run any PyGBe case, you can pass `pygbe` a relative or an absolute path to the problem folder.
 
 ### Mesh
 In the `examples` folder, we provide meshes and `.pqr` files for a few example problems. 
@@ -107,6 +107,17 @@ To plug in your own protein data, download the corresponding `.pdb` file from th
 then get its `.pqr` file using any PDB to PQR converter (there are online tools available for this). 
 Our code interfaces with meshes generated using [MSMS (Michel Sanner's 
 Molecular Surface code)](http://mgltools.scripps.edu/packages/MSMS).  
+
+### AMOEBA support
+
+This version of PyGBe comes with support for the polarizable multipolar force field AMOEBA. If you are using this force field, add the `--polarizable` flag to your running command. For example:
+
+    > pygbe examples/1pgb_amoeba --polarizable
+
+The required input files for AMOEBA change a little bit, as it doesn't use the `.pqr` file anymore:
+
+   1. You need to have a `.xyz` file with the atom positions. You can obtain that from a PDB file with the program `pdbxyz` from the [Tinker package](https://dasher.wustl.edu/tinker/).
+   2. AMOEBA uses a `.key` file with the parameterization of the protein (charge distribution, radii, polarizability, etc.). You can include those parameters directly in the `.key` file or have it point to a predefined parameter file, like `amoebapro13.prm`.
 
 Let us know if you have any questions/feedback.
 
