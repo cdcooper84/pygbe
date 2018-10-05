@@ -235,6 +235,12 @@ def read_tinker(filename, REAL):
         line = f.readline().split()
         if line[0]=='parameters':
             file_key = line[1]
+
+        if not os.path.exists(file_key):
+            file_key = os.environ.get('PYGBE_PROBLEM_FOLDER')+'/'+file_key
+            if not os.path.isdir(file_key):
+                print('Cannot find parameter file')
+
         print ('Reading parameters from '+file_key)
 
     for line in file(file_key):
@@ -366,8 +372,8 @@ def read_tinker(filename, REAL):
             if neigh_type == multipole[1]:
                 if z_atom == -1:
                     z_atom = k
-                else:
-                    print 'Two (or more) possible z defining atoms for atom %i+1, using the first one'%i
+#                else:
+#                    print 'Two (or more) possible z defining atoms for atom %i+1, using the first one'%i
 
 #       Find x defining atom (no need to be bonded)
 #       First, look within 1-2 bonded atoms
@@ -378,8 +384,8 @@ def read_tinker(filename, REAL):
             if neigh_type == multipole[2] and k!=z_atom:
                 if x_atom == -1:
                     x_atom = k
-                else:
-                    print 'Two (or more) possible x defining atoms in 1-2 for atom %i+1, using the first one'%i
+#                else:
+#                    print 'Two (or more) possible x defining atoms in 1-2 for atom %i+1, using the first one'%i
 
 #       Next, look within 1-3 bonded atoms
         if x_atom==-1:
@@ -389,8 +395,8 @@ def read_tinker(filename, REAL):
                     if neigh_type == multipole[2] and l!=i and l!=z_atom:
                         if x_atom == -1:
                             x_atom = l
-                        else:
-                            print 'Two (or more) possible x defining atoms in 1-3 for atom %i+1, using the first one'%i
+#                       else:
+#                            print 'Two (or more) possible x defining atoms in 1-3 for atom %i+1, using the first one'%i
 
 #       Else, look within nonbonded atoms
         if x_atom==-1:
