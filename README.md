@@ -117,10 +117,13 @@ This version of PyGBe comes with support for the polarizable multipolar force fi
 The required input files for AMOEBA change a little bit, as it doesn't use the `.pqr` file anymore:
 
    1. You need to have a `.xyz` file with the atom positions. You can obtain that from a PDB file with the program `pdbxyz` from the [Tinker package](https://dasher.wustl.edu/tinker/).
-   2. AMOEBA uses a `.key` file with the parameterization of the protein (charge distribution, radii, polarizability, etc.). You can include those parameters directly in the `.key` file or have it point to a predefined parameter file, like `amoebapro13.prm`.
+   2. AMOEBA uses a `.key` file with the parameterization of the protein (charge distribution, radii, polarizability, etc.). You can include those parameters directly in the `.key` file or have it point to a predefined parameter file, like `amoebapro13.prm`. If you choose to point to a `.prm` file, the path can be either absolute or relative to the folder with the problem.
+   3. The name of the `.key` and `.xyz` files need to match, and that file name (without extension) has to be under `charge_file` in the `.config` file.
+
+You can still use `msms` for meshing. To get the `.xyzr` file for `msms` run the Python script under `scripts/tinker_to_xyzr.py` with the name of the `.key` file (without extension) as input.
 
 Let us know if you have any questions/feedback.
 
 Enjoy!
 
-Christopher (cdcooper@bu.edu)
+Christopher (christopher.cooper@usm.cl)
