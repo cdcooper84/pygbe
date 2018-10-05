@@ -1,0 +1,144 @@
+Run started on:
+	Date: 2018/10/5
+	Time: 15:53:40
+Cannot find parameter file
+Reading parameters from /home/chris/git_repo/pygbe_cdcooper/examples/1pgb_amoeba/amoebapro13.prm
+
+Reading tinker files for region 1 from /home/chris/git_repo/pygbe_cdcooper/examples/1pgb_amoeba/1pgb
+
+Reading surface 0 from file geometry/1pgb_d02_p1.4
+Time load mesh: 0.112564
+Removed areas=0: 12
+
+Total elements : 12524
+Total equations: 25048
+----------------------------
+1 surfaces:
+
+Surface 0:
+	12524 elements
+	Surface type       : dielectric_interface
+	Cells              : 781
+	Twigs              : 632
+	Levels             : 6
+	C0 size            : 20.311957
+	C0 box center      : 8.513545, 12.676137, 18.070214
+	Twig cell size     : 0.634749
+	Rbox/theta         : 1.057914
+	Analytic distance  : 0.832153
+	Elem. per sq Ang   : 3.971273
+	Max, min, avg elem.: 0.959127320527, 1.73205080757e-06, 0.251808429678
+	Total area         : 3153.648773
+----------------------------
+
+2 regions:
+
+Region 0:
+	Laplace or Yukawa: 2
+	kappa            : 0.125
+	dielectric const : 78.3
+	Number of charges: 0
+	Parent surface   : []
+	Child surfaces   : [0]
+Region 1:
+	Laplace or Yukawa: 1
+	kappa            : 1e-12
+	dielectric const : 1.0
+	Number of charges: 927
+	Parent surface   : [0]
+	Child surfaces   : []
+----------------------------
+
+Parameters:
+	Data type               : <type 'numpy.float64'>
+	Use GPU                 : 1
+	P                       : 4
+	threshold               : 0.80
+	theta                   : 0.60
+	NCRIT                   : 50
+	CUDA block size         : 256
+	Gauss points per element: 1
+	Gauss points near singlr: 19
+	1D Gauss points per side: 9
+	GMRES tolerance         : 1e-05
+	GMRES max iterations    : 1000
+	GMRES restart iteration : 200
+----------------------------
+
+Generate interaction list
+Transfer data to GPU
+List time          : 0.148051s
+Data transfer time : 0.018342s
+------------------------------
+Total setup time   : 1.862087s
+
+
+Self-consistent iteration 1
+Generate RHS
+Solve
+Analytical integrals: 21 of 12524, 0%
+iteration: 1, rel resid: 0.347505613325
+iteration: 2, rel resid: 0.247867424499
+iteration: 3, rel resid: 0.167713297811
+iteration: 4, rel resid: 0.0894267852168
+iteration: 5, rel resid: 0.0591381182235
+iteration: 6, rel resid: 0.0316842845797
+iteration: 7, rel resid: 0.0171333019284
+iteration: 8, rel resid: 0.0135283305928
+iteration: 9, rel resid: 0.00996835806138
+iteration: 10, rel resid: 0.00726964651425
+iteration: 11, rel resid: 0.00549975635077
+iteration: 12, rel resid: 0.00468261065395
+iteration: 13, rel resid: 0.00378593254552
+iteration: 14, rel resid: 0.00309632468212
+iteration: 15, rel resid: 0.00251056436678
+iteration: 16, rel resid: 0.00197859704853
+iteration: 17, rel resid: 0.00137664441035
+iteration: 18, rel resid: 0.00110502516955
+iteration: 19, rel resid: 0.000871126528632
+iteration: 20, rel resid: 0.000725738322659
+iteration: 21, rel resid: 0.00049778878499
+iteration: 22, rel resid: 0.000335589861594
+iteration: 23, rel resid: 0.000278575256385
+iteration: 24, rel resid: 0.000267039767697
+iteration: 25, rel resid: 0.000201669546359
+iteration: 26, rel resid: 0.000134347539953
+iteration: 27, rel resid: 0.000101166925473
+iteration: 28, rel resid: 7.51862167888e-05
+iteration: 29, rel resid: 6.35659647473e-05
+iteration: 30, rel resid: 4.34444540329e-05
+iteration: 31, rel resid: 3.16153269801e-05
+iteration: 32, rel resid: 2.44810827271e-05
+iteration: 33, rel resid: 1.73665934778e-05
+iteration: 34, rel resid: 1.40870648338e-05
+iteration: 35, rel resid: 1.15324006816e-05
+iteration: 36, rel resid: 9.74159874266e-06
+GMRES solve
+Converged after 36 iterations to a residual of 9.74159874266e-06
+Time weight vector: 0.219302
+Time sort         : 0.030792
+Time data transfer: 0.225176
+Time P2M          : 0.642962
+Time M2M          : 0.285253
+Time M2P          : 4.986224
+Time P2P          : 3.427614
+	Time analy: 0.000000
+Induced dipole residual: 0.0433614439996
+
+Self-consistent iteration 2
+Generate RHS
+Solve
+Analytical integrals: 824 of 12524, 6%
+iteration: 1, rel resid: 0.0338484028143
+iteration: 2, rel resid: 0.0316403857095
+iteration: 3, rel resid: 0.0190503047114
+iteration: 4, rel resid: 0.0138106973276
+iteration: 5, rel resid: 0.00646670987124
+iteration: 6, rel resid: 0.00543115121665
+iteration: 7, rel resid: 0.00378305267762
+iteration: 8, rel resid: 0.00252113204427
+iteration: 9, rel resid: 0.00228984185391
+iteration: 10, rel resid: 0.00150735031662
+iteration: 11, rel resid: 0.000963711278765
+iteration: 12, rel resid: 0.000744390439355
+iteration: 13, rel resid: 0.000595880268453

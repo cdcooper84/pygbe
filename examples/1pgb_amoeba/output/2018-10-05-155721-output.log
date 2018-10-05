@@ -1,0 +1,87 @@
+Run started on:
+	Date: 2018/10/5
+	Time: 15:57:21
+Cannot find parameter file
+Reading parameters from /home/chris/git_repo/pygbe_cdcooper/examples/1pgb_amoeba/amoebapro13.prm
+
+Reading tinker files for region 1 from /home/chris/git_repo/pygbe_cdcooper/examples/1pgb_amoeba/1pgb
+
+Reading surface 0 from file geometry/1pgb_d02_p1.4
+Time load mesh: 0.124176
+Removed areas=0: 12
+
+Total elements : 12524
+Total equations: 25048
+----------------------------
+1 surfaces:
+
+Surface 0:
+	12524 elements
+	Surface type       : dielectric_interface
+	Cells              : 781
+	Twigs              : 632
+	Levels             : 6
+	C0 size            : 20.311957
+	C0 box center      : 8.513545, 12.676137, 18.070214
+	Twig cell size     : 0.634749
+	Rbox/theta         : 1.057914
+	Analytic distance  : 0.832153
+	Elem. per sq Ang   : 3.971273
+	Max, min, avg elem.: 0.959127320527, 1.73205080757e-06, 0.251808429678
+	Total area         : 3153.648773
+----------------------------
+
+2 regions:
+
+Region 0:
+	Laplace or Yukawa: 2
+	kappa            : 0.125
+	dielectric const : 78.3
+	Number of charges: 0
+	Parent surface   : []
+	Child surfaces   : [0]
+Region 1:
+	Laplace or Yukawa: 1
+	kappa            : 1e-12
+	dielectric const : 1.0
+	Number of charges: 927
+	Parent surface   : [0]
+	Child surfaces   : []
+----------------------------
+
+Parameters:
+	Data type               : <type 'numpy.float64'>
+	Use GPU                 : 1
+	P                       : 4
+	threshold               : 0.80
+	theta                   : 0.60
+	NCRIT                   : 50
+	CUDA block size         : 256
+	Gauss points per element: 1
+	Gauss points near singlr: 19
+	1D Gauss points per side: 9
+	GMRES tolerance         : 1e-05
+	GMRES max iterations    : 1000
+	GMRES restart iteration : 200
+----------------------------
+
+Generate interaction list
+Transfer data to GPU
+List time          : 0.153110s
+Data transfer time : 0.020089s
+------------------------------
+Total setup time   : 2.072311s
+
+
+Self-consistent iteration 1
+Generate RHS
+Solve
+Analytical integrals: 21 of 12524, 0%
+iteration: 1, rel resid: 0.347505613325
+iteration: 2, rel resid: 0.247867424499
+iteration: 3, rel resid: 0.167713297811
+iteration: 4, rel resid: 0.0894267852168
+iteration: 5, rel resid: 0.0591381182235
+iteration: 6, rel resid: 0.0316842845797
+iteration: 7, rel resid: 0.0171333019284
+iteration: 8, rel resid: 0.0135283305928
