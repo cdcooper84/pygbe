@@ -1,0 +1,225 @@
+Run started on:
+	Date: 2017/8/7
+	Time: 17:41:36
+
+Reading tinker files for region 1 from /home/chris/git_repo/pygbe_cdcooper/examples/methylamine//methylamine
+
+Reading surface 0 from file methylamine_d32
+Time load mesh: 0.142690
+Removed areas=0: 0
+
+Total elements : 13306
+Total equations: 26612
+----------------------------
+1 surfaces:
+
+Surface 0:
+	13306 elements
+	Surface type       : dielectric_interface
+	Cells              : 65
+	Twigs              : 56
+	Levels             : 3
+	C0 size            : 4.514263
+	C0 box center      : -0.051263, -0.000760, -0.033616
+	Twig cell size     : 1.128566
+	Rbox/theta         : 2.257132
+	Analytic distance  : 0.356852
+	Elem. per sq Ang   : 62.486236
+	Max, min, avg elem.: 0.0360857653237, 0.000717658344897, 0.0160035243614
+	Total area         : 212.942895
+----------------------------
+
+2 regions:
+
+Region 0:
+	Laplace or Yukawa: 2
+	kappa            : 0.125
+	dielectric const : 80.0
+	Number of charges: 0
+	Parent surface   : []
+	Child surfaces   : [0]
+Region 1:
+	Laplace or Yukawa: 1
+	kappa            : 1e-12
+	dielectric const : 4.0
+	Number of charges: 7
+	Parent surface   : [0]
+	Child surfaces   : []
+----------------------------
+
+Parameters:
+	Data type               : <type 'numpy.float64'>
+	Use GPU                 : 1
+	P                       : 8
+	threshold               : 0.50
+	theta                   : 0.50
+	NCRIT                   : 1000
+	CUDA block size         : 128
+	Gauss points per element: 3
+	Gauss points near singlr: 37
+	1D Gauss points per side: 9
+	GMRES tolerance         : 1e-06
+	GMRES max iterations    : 1000
+	GMRES restart iteration : 100
+----------------------------
+
+Generate interaction list
+Transfer data to GPU
+List time          : 0.012815s
+Data transfer time : 0.011384s
+------------------------------
+Total setup time   : 0.965372s
+
+
+Self-consistent iteration 1
+Generate RHS
+Solve
+Analytical integrals: 49 of 13306, 0%
+iteration: 1, rel resid: 0.174108626165
+iteration: 2, rel resid: 0.100181246239
+iteration: 3, rel resid: 0.0272369534746
+iteration: 4, rel resid: 0.0172502876052
+iteration: 5, rel resid: 0.0114963377031
+iteration: 6, rel resid: 0.00798482839675
+iteration: 7, rel resid: 0.00337505387591
+iteration: 8, rel resid: 0.00196922857967
+iteration: 9, rel resid: 0.00147601791487
+iteration: 10, rel resid: 0.00116232407911
+iteration: 11, rel resid: 0.000735833983576
+iteration: 12, rel resid: 0.000375719201422
+iteration: 13, rel resid: 0.000270842619261
+iteration: 14, rel resid: 0.000178483214537
+iteration: 15, rel resid: 0.000143380869531
+iteration: 16, rel resid: 0.000112534317323
+iteration: 17, rel resid: 9.11677785649e-05
+iteration: 18, rel resid: 7.50122663768e-05
+iteration: 19, rel resid: 5.70143624081e-05
+iteration: 20, rel resid: 4.14172010217e-05
+iteration: 21, rel resid: 3.1829407962e-05
+iteration: 22, rel resid: 2.45188717495e-05
+iteration: 23, rel resid: 1.92768964843e-05
+iteration: 24, rel resid: 1.28595772814e-05
+iteration: 25, rel resid: 9.07305395465e-06
+iteration: 26, rel resid: 6.48946552077e-06
+iteration: 27, rel resid: 4.8323962444e-06
+iteration: 28, rel resid: 3.71145491136e-06
+iteration: 29, rel resid: 2.85556589666e-06
+iteration: 30, rel resid: 1.92496517024e-06
+iteration: 31, rel resid: 1.24571968699e-06
+iteration: 32, rel resid: 8.61983296405e-07
+GMRES solve
+Converged after 32 iterations to a residual of 8.61983296405e-07
+Time weight vector: 0.591674
+Time sort         : 0.059131
+Time data transfer: 0.229921
+Time P2M          : 5.361465
+Time M2M          : 0.154671
+Time M2P          : 4.757136
+Time P2P          : 12.195546
+	Time analy: 0.000000
+
+Self-consistent iteration 2
+Generate RHS
+Solve
+Analytical integrals: 1680 of 13306, 12%
+iteration: 1, rel resid: 0.00329370442744
+iteration: 2, rel resid: 0.00210404494172
+iteration: 3, rel resid: 0.00110937470983
+iteration: 4, rel resid: 0.000837100009711
+iteration: 5, rel resid: 0.000425861354365
+iteration: 6, rel resid: 0.000187295998569
+iteration: 7, rel resid: 0.000102437215558
+iteration: 8, rel resid: 8.13224466151e-05
+iteration: 9, rel resid: 6.28694608219e-05
+iteration: 10, rel resid: 4.62668730259e-05
+iteration: 11, rel resid: 2.68121631057e-05
+iteration: 12, rel resid: 1.45171324057e-05
+iteration: 13, rel resid: 1.07045438458e-05
+iteration: 14, rel resid: 7.43788794945e-06
+iteration: 15, rel resid: 5.84335622894e-06
+iteration: 16, rel resid: 4.69704140082e-06
+iteration: 17, rel resid: 3.63694470252e-06
+iteration: 18, rel resid: 2.83531803124e-06
+iteration: 19, rel resid: 2.19528870156e-06
+iteration: 20, rel resid: 1.74970186046e-06
+iteration: 21, rel resid: 1.31996971999e-06
+iteration: 22, rel resid: 1.0212463635e-06
+iteration: 23, rel resid: 7.64407164652e-07
+GMRES solve
+Converged after 23 iterations to a residual of 7.64407164652e-07
+Time weight vector: 1.022519
+Time sort         : 0.102387
+Time data transfer: 0.395428
+Time P2M          : 9.281838
+Time M2M          : 0.266885
+Time M2P          : 8.125634
+Time P2P          : 21.069891
+	Time analy: 0.000000
+
+Self-consistent iteration 3
+Generate RHS
+Solve
+Analytical integrals: 2865 of 13306, 21%
+iteration: 1, rel resid: 3.20088235208e-06
+iteration: 2, rel resid: 2.03286039299e-06
+iteration: 3, rel resid: 1.25422395993e-06
+iteration: 4, rel resid: 9.73326319719e-07
+GMRES solve
+Converged after 4 iterations to a residual of 9.73326319719e-07
+Time weight vector: 1.115074
+Time sort         : 0.111197
+Time data transfer: 0.429940
+Time P2M          : 10.108547
+Time M2M          : 0.289664
+Time M2P          : 8.831630
+Time P2P          : 22.918995
+	Time analy: 0.000000
+
+Self-consistent iteration 4
+Generate RHS
+Solve
+Analytical integrals: 3113 of 13306, 23%
+iteration: 1, rel resid: 9.26577603593e-07
+GMRES solve
+Converged after 1 iterations to a residual of 9.26577603593e-07
+Time weight vector: 1.154952
+Time sort         : 0.114618
+Time data transfer: 0.443378
+Time P2M          : 10.455382
+Time M2M          : 0.298617
+Time M2P          : 9.110980
+Time P2P          : 23.658754
+	Time analy: 0.000000
+Took 4 iterations for induced dipole in dissolved state to converge
+RHS generation time: 0.091138s
+Solve time         : 45.561819s
+
+Calculate Esolv
+Calculating solvation energy for region 1, stored in E_solv[0]
+2580 of 13306 analytical integrals for phi_reac calculation in region 1
+Time Esolv: 0.587367s
+Region 1: Esolv = -0.757310 kcal/mol = -3.168586 kJ/mol
+
+Calculate Esurf
+Time Esurf: 0.014226s
+
+Calculate Ecoul
+Calculate Coulomb energy in dissolved state for region 1
+Calculate vacuum induced dipole
+7 iterations for vacuum induced dipole to converge
+Calculate Coulomb energy in vacuum for region 1
+Region 1: Ecoul = -42.138186 kcal/mol = -176.306172 kJ/mol
+Time Ecoul: 0.000713s
+
+--------------------------------
+Totals:
+Note: if multipoles are polarizables, energy calculations
+      have the polarization energy substracted out
+Esolv                  = -0.757310 kcal/mol
+Ecoul_diss             = -42.138186 kcal/mol
+Ecoul_vac              = -42.104529 kcal/mol
+----------------------------------------------
+Total solvation energy = -0.790967 kcal/mol
+Esurf      = 0.000000 kcal/mol
+
+Time = 47.980761 s
