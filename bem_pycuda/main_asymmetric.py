@@ -236,6 +236,28 @@ while phi_L2error>tol_picard and picardIter<Npicard:
                 h_nonlinear = alpha*tanh(beta*ElecField-gamma) + mu
                 f_nonlinear = s.Ein/(s.Eout-s.Ein) - h_nonlinear
                 s.E_hat = f_nonlinear/(1+f_nonlinear)
+
+            if s.surf_type == 'stern_layer':
+                qtotal = 0
+                dielectric_surf = []
+                for ff in range(len(field_array)):
+                    f = field_array[ff]
+                    if len(f.parent)>0 and f.parent[0]==ss:
+                        dielectric_surf = f.child
+
+                        for ds in dielectric_surf:
+                            for f2 in field_array:
+                                if len(f2.parent)>0 and f2.parent[0]==ds and len(f2.q)>0:
+                                    qtotal += sum(f2.q)
+
+                        
+                        sigma_total = sum(s.dphi*s.Area)
+                        if abs(sigma_total)<1e-10:
+                            sigma_total = -qtotal/s.Eout
+                        s.E_hat = -(qtotal/s.Eout)/sigma_total
+
+
+            '''
             if s.surf_type == 'stern_layer':
                 qtotal = 0
                 for f in field_array:
@@ -245,6 +267,8 @@ while phi_L2error>tol_picard and picardIter<Npicard:
                 if abs(sigma_total)<1e-10:
                     sigma_total = -qtotal/s.Eout
                 s.E_hat = -(qtotal/s.Eout)/sigma_total
+            '''
+
             computePrecond(s)
 
 
