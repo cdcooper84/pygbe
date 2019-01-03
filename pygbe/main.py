@@ -92,6 +92,10 @@ def read_inputs():
                         default='output', help="Output folder")
     parser.add_argument('--polarizable', action='store_true', 
                         help="Turn on polarizable multipole capabilities")
+    parser.add_argument('--phi_initial', dest='phi_initial', type=str, default=None,
+                        help="Path to file with initial guess for linear system")
+    parser.add_argument('--phi_filename', dest='phi_filename', type=str, default=None,
+                        help="User defined file name for result of linear system, saved to outputs folder")
 
     return parser.parse_args()
 
@@ -368,7 +372,14 @@ def main(log_output=True):
 
         ### Solve
         print 'Solve'
-        phi = numpy.zeros(param.Neq)
+        if args.phi_initial is None:
+            phi = numpy.zeros(param.Neq)
+        else:
+            phi = numpy.loadtxt(args.phi_initial)
+        if len(phi)!=param.Neq:
+            print ("File for initial phi has the wrong size")
+            phi = numpy.zeros(param.Neq)
+
         phi = gmres_solver(surf_array, field_array, phi, F, param, ind0, timing, kernel) 
         toc = time.time()
         solve_time = toc-tic
@@ -379,6 +390,10 @@ def main(log_output=True):
 
     phifname = '{:%Y-%m-%d-%H%M%S}-phi.txt'.format(datetime.now())
     numpy.savetxt(os.path.join(output_dir, phifname),phi)
+
+    if args.phi_filename is not None:
+        phifname = args.phi_filename 
+        numpy.savetxt(os.path.join(output_dir, phifname),phi)
 #    phi = numpy.loadtxt('phi.txt')
 
     ### Calculate solvation energy
