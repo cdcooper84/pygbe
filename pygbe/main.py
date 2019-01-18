@@ -95,7 +95,7 @@ def read_inputs():
     parser.add_argument('--phi_initial', dest='phi_initial', type=str, default=None,
                         help="Path to file with initial guess for linear system")
     parser.add_argument('--phi_filename', dest='phi_filename', type=str, default=None,
-                        help="User defined file name for result of linear system, saved to outputs folder")
+                        help="User defined file name for result of linear system, saved to outputs folder.")
 
     return parser.parse_args()
 
@@ -164,6 +164,7 @@ def main(log_output=True):
     args = read_inputs()
     configFile, paramfile = find_config_files(args)
     full_path = os.environ.get('PYGBE_PROBLEM_FOLDER') + '/'
+
 
     #try to expand ~ if present in output path
     args.output = os.path.expanduser(args.output)
