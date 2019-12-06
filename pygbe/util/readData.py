@@ -281,6 +281,9 @@ def read_tinker(filename, REAL):
                     z_axis = line[2]
                     x_axis = line[3]
 
+                    if len(line)<5:
+                        x_axis = '0'
+
                     if len(line)>5:
                         y_axis = line[4]
                     else:
@@ -289,7 +292,7 @@ def read_tinker(filename, REAL):
                     axis_type = 'z_then_x'
                     if REAL(z_axis)==0:
                         axis_type = 'None'
-                    if REAL(z_axis)!=0 and REAL(x_axis)==0: # not implemented yet
+                    if REAL(z_axis)!=0 and REAL(x_axis)==0: 
                         axis_type = 'z_only'
                     if REAL(z_axis)<0 or REAL(x_axis)<0:
                         axis_type = 'bisector'
@@ -327,7 +330,7 @@ def read_tinker(filename, REAL):
                     multipole_flag = -1            
 
                 multipole_flag += 1
-                
+               
     polar_group_counter = 0
     for i in range(N):
 #       Get polarizability
@@ -362,7 +365,6 @@ def read_tinker(filename, REAL):
                         print 'double polarization group assigment here too!'
 
         multipole = find_multipole(multipole_list, connections, atom_type, pos, i, N)
-
 
 #       Find local axis
 #       Find z defining atom (needs to be bonded)
@@ -418,6 +420,9 @@ def read_tinker(filename, REAL):
 #                if jj in x_possible_atom and jj!=z_atom:
 #                    print 'For atom %i+1, there was a bonded atom that could have been x-defining, but is not'
 
+        if x_atom==-1 and multipole[4]=='z_only': # no need for an x_atom
+            x_atom = -2    
+
         if z_atom==-1 or x_atom==-1: # for example, in the sphere case
             i_local = numpy.array([1,0,0])
             j_local = numpy.array([0,1,0])
@@ -436,7 +441,23 @@ def read_tinker(filename, REAL):
                 k_local = k_local/numpy.linalg.norm(k_local)
                 i_local = (r13 - numpy.dot(r13,k_local)*k_local)/numpy.linalg.norm(r13 - numpy.dot(r13,k_local)*k_local)
                 j_local = numpy.cross(k_local, i_local)
+
+            elif multipole[4]=='z_only':
+                k_local = r12/numpy.linalg.norm(r12) 
            
+                dX = numpy.array([1.,0.,0.])
+                dot = k_local[0]
+                if abs(dot) > 0.866:
+                    dX[0] = 0.
+                    dX[1] = 1.
+                    dot = k_local[1]
+
+                dX -= dot*k_local
+                i_local = dX/numpy.linalg.norm(dX)
+
+                j_local = numpy.cross(k_local, i_local)
+
+
 #       Assign charge
         q[i] = charge[multipole]
         
@@ -559,6 +580,8 @@ def read_tinker(filename, REAL):
     connections_group_14 = connections_group_14[:pointer_connections_14[-1]]
     connections_group_15 = connections_group_15[:pointer_connections_15[-1]]
     '''
+#    for i in range(N):
+#        print ('%i %1.4f %1.4f %1.4f\n%1.4f\n%1.4f %1.4f %1.4f\n%1.4f\n%1.4f %1.4f\n%1.4f %1.4f %1.4f\n\n'%(i, pos[i,0], pos[i,1], pos[i,2], q[i], p[i,0], p[i,1], p[i,2], Q[i,0,0], Q[i,1,0], Q[i,1,1], Q[i,2,0], Q[i,2,1], Q[i,2,2]))
 
     return pos, q, p, Q, alpha, mass, polar_group, thole, \
            connections_12, connections_13, \
