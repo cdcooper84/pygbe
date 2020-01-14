@@ -490,6 +490,9 @@ def read_tinker(filename, REAL):
         stop = pointer_connections_12[i+1]
         connections_12[start:stop] = connections[i]
 
+    if N<2: #if no 1-2 connections
+        connections_12 = numpy.zeros(N) # this avoids a GPU error later
+
 #   1-3 connections
     connections_13 = numpy.zeros(N_connections*N_connections/N, dtype=numpy.int32)
     pointer_connections_13 = numpy.zeros(N+1, dtype=numpy.int32)    # pointer to beginning of interaction list
@@ -509,7 +512,6 @@ def read_tinker(filename, REAL):
         connections_13 = connections_13[:pointer_connections_13[-1]]
     else:
         connections_13 = numpy.zeros(N) # this avoids a GPU error later
-        connections_12 = numpy.zeros(N) # this avoids a GPU error later
 
 
     ''' No need!
