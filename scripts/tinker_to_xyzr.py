@@ -32,14 +32,18 @@ from argparse import ArgumentParser
 
 parser = ArgumentParser(description='Read in Tinker and output xyzr')
 parser.add_argument('--solute', action='store_true',
-                    help="Setif vdw radii will be read from the SOLUTE keyword")
+                    help="Set if vdw radii will be read from the SOLUTE keyword")
 parser.add_argument('-f', '--file', dest='file_in', type=str, default='',
                     help='Filename of xyz and key files')
 
 #file_in = sys.argv[1]
 file_xyz = parser.parse_args().file_in+'.xyz'
 file_key = parser.parse_args().file_in+'.key'
-file_out = parser.parse_args().file_in+'.xyzr'
+
+if parser.parse_args().solute:
+    file_out = parser.parse_args().file_in+'_solute.xyzr'
+else:
+    file_out = parser.parse_args().file_in+'.xyzr'
 
 
 with open(file_xyz, 'r') as f:
@@ -81,12 +85,11 @@ for line in file(file_key):
         if line[0].lower()=='atom':
             atom_class[line[1]] = line[2]
 
-        if parser.parse_args().solute: 
-            if line[0].lower()=='solute':
-                vdw_radii[line[1]] = numpy.float64(line[4])/2.
-        else:
-            if line[0].lower()=='vdw':
-                vdw_radii[line[1]] = numpy.float64(line[2])/2.
+        if parser.parse_args().solute and line[0].lower()=='solute': 
+            vdw_radii[line[1]] = numpy.float64(line[4])/2.
+
+        if line[0].lower()=='vdw' and line[1] not in vdw_radii:
+            vdw_radii[line[1]] = numpy.float64(line[2])/2.
                 
 for i in range(N):
     r[i] = vdw_radii[atom_class[atom_type[i]]] 

@@ -493,18 +493,23 @@ def read_tinker(filename, REAL):
 #   1-3 connections
     connections_13 = numpy.zeros(N_connections*N_connections/N, dtype=numpy.int32)
     pointer_connections_13 = numpy.zeros(N+1, dtype=numpy.int32)    # pointer to beginning of interaction list
-    for i in range(N):
-        possible_connections = numpy.concatenate(connections[connections[i]])
-        possible_connections = numpy.unique(possible_connections) # filter out repeated connections 
-        index_self = numpy.where(possible_connections==i)[0] # remove self atom
-        possible_connections = numpy.delete(possible_connections, index_self)
-        pointer_connections_13[i+1] = pointer_connections_13[i] + len(possible_connections) 
-    
-        start = pointer_connections_13[i]
-        end   = pointer_connections_13[i+1]
-        connections_13[start:end] = possible_connections 
 
-    connections_13 = connections_13[:pointer_connections_13[-1]]
+    if N>2: # ions and diatomic molecules have no 1-3 connections
+        for i in range(N):
+            possible_connections = numpy.concatenate(connections[connections[i]])
+            possible_connections = numpy.unique(possible_connections) # filter out repeated connections 
+            index_self = numpy.where(possible_connections==i)[0] # remove self atom
+            possible_connections = numpy.delete(possible_connections, index_self)
+            pointer_connections_13[i+1] = pointer_connections_13[i] + len(possible_connections) 
+        
+            start = pointer_connections_13[i]
+            end   = pointer_connections_13[i+1]
+            connections_13[start:end] = possible_connections 
+
+        connections_13 = connections_13[:pointer_connections_13[-1]]
+    else:
+        connections_13 = numpy.zeros(N) # this avoids a GPU error later
+        connections_12 = numpy.zeros(N) # this avoids a GPU error later
 
 
     ''' No need!
